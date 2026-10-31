@@ -1,28 +1,67 @@
 # Dustline
 
-第一版 3D 越野自由驾驶原型，参考《GARBAGE COUNTRY》的俯斜视角、暖色荒地和低多边形废墟气质。
+参考 [noio 的《GARBAGE COUNTRY》预告](https://x.com/noio_games/status/1931808116879786225) 制作的原创 3D 越野探索项目。当前是可运行的开发版本，**尚未完成发布验收**。
+
+![实机画面](docs/previews/service.png)
 
 ## 运行
 
+引擎：Godot 4.7.2。当前 Mac 安装于 `/Users/m4002/Applications/Godot.app`。在项目目录依次执行：
+
 ```sh
-/Users/m4002/Applications/Godot.app/Contents/MacOS/Godot --path /Users/m4002/Projects/offroad-roam
+/Users/m4002/Applications/Godot.app/Contents/MacOS/Godot --headless --path . --editor --import --quit
+/Users/m4002/Applications/Godot.app/Contents/MacOS/Godot --path .
 ```
+
+也可用 Godot 打开 `project.godot`，等待导入完成后按 F6/F5 运行。默认使用 Metal / Forward+；兼容性诊断可传 `--rendering-method gl_compatibility`，该模式没有相同的环境遮蔽效果。
 
 ## 操作
 
-- `WASD` 或方向键：驾驶
-- `Space`：手刹
-- `R`：回到起点
+| 操作 | 按键 |
+| --- | --- |
+| 驾驶 | WASD / 方向键 |
+| 手刹 | Space |
+| 回到修理站 | R |
+| 查看探索地图 | M |
+| 暂停、音量、退出 | Esc |
+| 缩放镜头 | 鼠标滚轮 |
 
-当前版本是一条可玩的风格切片：场景、车辆、废墟、路标、风车、岩石、坡道和尘土都由 Godot 程序化生成，保持统一的低多边形暖色荒地语言。
+## 当前内容
 
-音频目录包含原创的引擎循环和荒地环境循环；WAV 用于编辑和导出，PCM 数据让无界面运行也能稳定加载。音频只借鉴参考视频的氛围，不复制其音乐。
+- 300 × 260 米的可驾驶地形：修理站、废车场、浅水河道、双桥、采石区与中继设施。
+- 15 个独立体素模型场景；车身、轮胎、设施、废车、护栏等都有可重建的源代码。
+- 四轮射线悬挂、前进/倒车、抓地力和手刹、涉水阻力、尘土、水花、限量轮迹。
+- 引擎、砂石胎噪、涉水、风声、碰撞、发现提示共 6 个原创声音文件。
+- 俯斜正交镜头、地点发现、地图、暂停和总音量控制。探索记录当前只保留在本次运行中。
 
-## 校验
+素材来源与编辑方式见 [素材清单](docs/ASSETS.md)；参考视频拆解、地图推定范围见 [参考说明](docs/REFERENCE.md)；发布差距和实测记录见 [验收记录](docs/ACCEPTANCE.md)。视频中的塔防、升级系统和完整配乐范围仍待用户确认。
+
+## 验证与构建
+
+下面的 `godot` 指对应平台的 Godot 可执行文件。导入完成后再运行测试，不能同时启动两者。
 
 ```sh
-/Users/m4002/Applications/Godot.app/Contents/MacOS/Godot --headless --path . --editor --quit
-/Users/m4002/Applications/Godot.app/Contents/MacOS/Godot --headless --path . --quit-after 3
+godot --headless --path . --editor --import --quit
+godot --headless --path . --script tests/smoke.gd
+godot --path . --script tests/capture.gd -- /tmp/dustline-service.png
 ```
 
-发布级版本还需要继续打磨车辆模型、材质贴图、关卡节奏、碰撞细节、混音和目标平台导出设置；本仓库当前提交提供可持续迭代的完整玩法基线。
+冒烟测试验证接地、静止稳定、加速、转向、制动、重置、空中动力限制、涉水、暂停和双桥通行。检查输出中的 `SMOKE: PASS`，也要检查 `SCRIPT ERROR` / `ERROR`，不能只看退出码。
+
+```sh
+mkdir -p build
+godot --headless --path . --export-pack macOS build/Dustline.pck
+godot --main-pack build/Dustline.pck
+```
+
+`build/Dustline.pck` 是本机测试用资源包，需 Godot 运行；不是已签名的 macOS 应用。独立应用导出还需要对应版本的 macOS 导出模板。
+
+## 编辑素材
+
+```sh
+godot --headless --path . --script tools/build_assets.gd
+python3 tools/build_audio.py
+godot --headless --path . --editor --import --quit
+```
+
+模型源文件是 `tools/build_assets.gd`，声音源文件是 `tools/build_audio.py`。地图地标和主路布局在 `assets/world/route.json`，地形、植被、桥梁和废料分布在 `world.gd`。旧的 `audio/` 是历史原型音频，当前游戏不再引用，导出时排除。

@@ -1,6 +1,5 @@
 .godot/
-*.uid
-*.import
+# Keep resource UIDs and import settings; only the import cache is disposable.
 .DS_Store
 *.log
 build/

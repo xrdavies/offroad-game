@@ -1,5 +1,6 @@
 .godot/
 *.uid
+*.import
 .DS_Store
 *.log
 build/

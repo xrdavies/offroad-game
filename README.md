@@ -57,7 +57,22 @@ godot --headless --path . --export-pack macOS build/Dustline.pck
 godot --main-pack build/Dustline.pck
 ```
 
-`build/Dustline.pck` 是本机测试用资源包，需 Godot 运行；不是已签名的 macOS 应用。独立应用导出还需要对应版本的 macOS 导出模板。
+`build/Dustline.pck` 是本机测试用资源包，需 Godot 运行。
+
+### macOS DMG
+
+在 macOS 上安装与引擎版本一致的官方导出模板（Godot 的 **Editor → Manage Export Templates**），然后在项目目录执行：
+
+```sh
+mkdir -p build
+godot --headless --path . --editor --import --quit
+godot --headless --path . --export-release macOS build/Dustline.dmg
+hdiutil verify build/Dustline.dmg
+```
+
+打开 `build/Dustline.dmg`，把其中的 `Dustline.app` 拖到“应用程序”后启动；玩家无需安装 Godot。默认导出包含 Apple Silicon 和 Intel 两种架构，仍需在各目标机型验证图形兼容性。
+
+当前导出使用临时签名（ad-hoc），没有 Apple Developer ID 签名或公证；通过网络下载后，macOS 可能拦截首次启动。正式分发前需要配置开发者证书并完成公证，详见 [Godot macOS 导出说明](https://docs.godotengine.org/en/4.7/tutorials/export/exporting_for_macos.html)。安装包仍属于开发测试版本，不表示已完成游戏发布验收。`build/` 中的产物不提交到 Git。
 
 ## 编辑素材
 

@@ -231,7 +231,7 @@ func _build_places() -> void:
 					prev=next
 	for z in range(-36,16,6):
 		_asset("barrier",Vector3(75,0,z),PI/2)
-	_label("DUSTLINE  /  SERVICE",Vector3(-14,5.65,9.86),0.019)
+	_label("OFF ROAD RIDER  /  SERVICE",Vector3(-14,5.65,9.86),0.019)
 	_label("MOTOR YARD",Vector3(-63,height_at(-63,-44)+3,-44),0.03)
 
 func _build_scrap() -> void:

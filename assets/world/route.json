@@ -4,7 +4,7 @@
   "spawn": [-12, 24],
   "road": [[-12,24],[-32,5],[-38,-28],[-24,-55],[8,-64],[36,-54],[60,-30],[62,10],[42,35],[10,36],[-12,24]],
   "landmarks": [
-    {"id":"garage","name":"DUSTLINE SERVICE","position":[-14,5],"model":"garage","rotation":0},
+    {"id":"garage","name":"OFF ROAD RIDER SERVICE","position":[-14,5],"model":"garage","rotation":0},
     {"id":"scrapyard","name":"OLD MOTOR YARD","position":[-65,-22],"model":"water_tank","rotation":0},
     {"id":"wetlands","name":"THE FLOODWAY","position":[48,-70],"model":"utility_pole","rotation":0},
     {"id":"relay","name":"NORTH RELAY","position":[-3,-99],"model":"relay","rotation":0},

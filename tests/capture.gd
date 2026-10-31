@@ -39,7 +39,7 @@ func _run() -> void:
 		scene.camera.position=target+Vector3(30,39,33)
 		scene.camera.look_at(target)
 	await RenderingServer.frame_post_draw
-	var path := args[0] if not args.is_empty() else "/tmp/dustline-capture.png"
+	var path := args[0] if not args.is_empty() else "/tmp/off-road-rider-capture.png"
 	var result := root.get_texture().get_image().save_png(path)
 	print("CAPTURE ",path," status=",result," fps=",Engine.get_frames_per_second()," draws=",Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))
 	scene.queue_free()

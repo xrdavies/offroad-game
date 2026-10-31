@@ -1,4 +1,4 @@
-# Dustline
+# Off Road Rider
 
 参考 [noio 的《GARBAGE COUNTRY》预告](https://x.com/noio_games/status/1931808116879786225) 制作的原创 3D 越野探索项目。当前是可运行的开发版本，**尚未完成发布验收**。
 
@@ -46,18 +46,18 @@
 ```sh
 godot --headless --path . --editor --import --quit
 godot --headless --path . --script tests/smoke.gd
-godot --path . --script tests/capture.gd -- /tmp/dustline-service.png
+godot --path . --script tests/capture.gd -- /tmp/off-road-rider-service.png
 ```
 
 冒烟测试验证接地、静止稳定、加速、转向、制动、重置、空中动力限制、涉水、暂停、双桥通行和垃圾山碰撞，并检查场景实例的空间分区。去掉 `--headless` 运行同一测试，还会验证渲染器中的实例变换与颜色（Godot 无界面渲染器不保存这两项）。检查输出中的 `SMOKE: PASS`，也要检查 `SCRIPT ERROR` / `ERROR`，不能只看退出码。
 
 ```sh
 mkdir -p build
-godot --headless --path . --export-pack macOS build/Dustline.pck
-godot --main-pack build/Dustline.pck
+godot --headless --path . --export-pack macOS build/OffRoadRider.pck
+godot --main-pack build/OffRoadRider.pck
 ```
 
-`build/Dustline.pck` 是本机测试用资源包，需 Godot 运行。
+`build/OffRoadRider.pck` 是本机测试用资源包，需 Godot 运行。
 
 ### macOS DMG
 
@@ -66,11 +66,11 @@ godot --main-pack build/Dustline.pck
 ```sh
 mkdir -p build
 godot --headless --path . --editor --import --quit
-godot --headless --path . --export-release macOS build/Dustline.dmg
-hdiutil verify build/Dustline.dmg
+godot --headless --path . --export-release macOS build/OffRoadRider.dmg
+hdiutil verify build/OffRoadRider.dmg
 ```
 
-打开 `build/Dustline.dmg`，把其中的 `Dustline.app` 拖到“应用程序”后启动；玩家无需安装 Godot。默认导出包含 Apple Silicon 和 Intel 两种架构，仍需在各目标机型验证图形兼容性。
+打开 `build/OffRoadRider.dmg`，把其中的 `Off Road Rider.app` 拖到“应用程序”后启动；玩家无需安装 Godot。默认导出包含 Apple Silicon 和 Intel 两种架构，仍需在各目标机型验证图形兼容性。
 
 当前导出使用临时签名（ad-hoc），没有 Apple Developer ID 签名或公证；通过网络下载后，macOS 可能拦截首次启动。正式分发前需要配置开发者证书并完成公证，详见 [Godot macOS 导出说明](https://docs.godotengine.org/en/4.7/tutorials/export/exporting_for_macos.html)。安装包仍属于开发测试版本，不表示已完成游戏发布验收。`build/` 中的产物不提交到 Git。
 

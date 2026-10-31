@@ -15,6 +15,7 @@ func _frames(count: int) -> void:
 		await physics_frame
 
 func _run() -> void:
+	_check_spatial_batches()
 	var scene: Node3D = load("res://main.tscn").instantiate()
 	root.add_child(scene)
 	current_scene=scene
@@ -26,6 +27,14 @@ func _run() -> void:
 	_check(scene.world.models.size()>=10,"World must instantiate the authored asset library")
 	_check(car.engine_audio.stream.get_length()>1,"Engine resource must load after import")
 	_check(car.engine_audio.stream.loop_end>0,"Engine loop must include samples")
+	for center in scene.world.SCRAP_CENTERS:
+		var height: float=scene.world.height_at(center.x,center.y)
+		var point := Vector3(center.x,height,center.y)
+		var ray := PhysicsRayQueryParameters3D.create(point+Vector3.UP*15,point-Vector3.UP*3)
+		var hit: Dictionary=scene.world.get_world_3d().direct_space_state.intersect_ray(ray)
+		_check(not hit.is_empty(),"Scrap heaps must have terrain collision")
+		if not hit.is_empty():
+			_check(absf(hit.position.y-height)<0.15,"Heap collision must match its visible supporting terrain")
 	var start: Vector3=car.position
 	Input.action_press("accelerate")
 	await _frames(90)
@@ -53,6 +62,8 @@ func _run() -> void:
 	_check(car.grounded_wheels==0,"Airborne probe must be above all surfaces")
 	_check(Vector2(car.linear_velocity.x,car.linear_velocity.z).length()<0.1,"Engine must not accelerate the car in mid-air")
 	var x: float=scene.world.river_x(0)
+	var marsh := Vector3(scene.world.river_x(-15)+9,1.1,-15)
+	_check(scene.world.surface_at(marsh)=="water","Widened shallows must use the same water boundary as the terrain")
 	car.reset_to_start(Vector3(x,scene.world.height_at(x,0)+1.4,0))
 	await _frames(150)
 	_check(car.surface_kind=="water","Ford must use water drag and sound")
@@ -82,3 +93,30 @@ func _run() -> void:
 	scene.queue_free()
 	await create_timer(0.15).timeout
 	quit(0 if failures.is_empty() else 1)
+
+func _check_spatial_batches() -> void:
+	var world := Node3D.new()
+	world.set_script(load("res://world.gd"))
+	var transforms: Array[Transform3D]=[]
+	var colors: Array[Color]=[Color.RED,Color.GREEN,Color.BLUE,Color.WHITE,Color.YELLOW]
+	for x in [-32.1,-0.1,0.1,32.1,0.5]:
+		transforms.append(Transform3D(Basis.IDENTITY,Vector3(x,0,0)))
+	world._multimesh(transforms,BoxMesh.new(),Color.WHITE,false,colors)
+	_check(world.get_child_count()==4,"Nearby instances must share a spatial batch on both sides of zero")
+	var seen := 0
+	for batch in world.get_children():
+		seen+=batch.multimesh.instance_count
+		# Godot's headless dummy renderer does not retain instance transforms/colors.
+		if DisplayServer.get_name()=="headless":
+			continue
+		for i in batch.multimesh.instance_count:
+			var transform: Transform3D=batch.multimesh.get_instance_transform(i)
+			var index := -1
+			for candidate in transforms.size():
+				if transforms[candidate].is_equal_approx(transform):
+					index=candidate
+			_check(index>=0,"Spatial batches must preserve transforms across positive and negative cells")
+			if index>=0:
+				_check(batch.multimesh.get_instance_color(i).is_equal_approx(colors[index].srgb_to_linear()),"Spatial batches must keep each instance's assigned color")
+	_check(seen==transforms.size(),"Spatial batches must retain every instance")
+	world.free()

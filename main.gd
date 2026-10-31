@@ -18,7 +18,7 @@ var discovered: Array[String]=[]
 var spawn_point: Vector3
 var wind: AudioStreamPlayer
 var chime: AudioStreamPlayer
-var zoom := 29.0
+var zoom := 24.0
 var ui: Control
 var quitting := false
 
@@ -45,7 +45,7 @@ func _ready() -> void:
 	camera.far=400
 	camera.current=true
 	add_child(camera)
-	camera.position=spawn_point+Vector3(30,39,33)
+	camera.position=spawn_point+Vector3(30,34,33)
 	camera.look_at(spawn_point)
 	wind=car._loop(WIND,-31)
 	chime=AudioStreamPlayer.new()
@@ -58,7 +58,7 @@ func _process(delta: float) -> void:
 	if not is_instance_valid(car) or get_tree().paused:
 		return
 	var target: Vector3=car.global_position+Vector3(0,0.5,0)+car.linear_velocity*0.22
-	var offset := Vector3(30,39,33)
+	var offset := Vector3(30,34,33)
 	camera.global_position=camera.global_position.lerp(target+offset,1-exp(-delta*5))
 	camera.look_at(camera.global_position-offset)
 	camera.size=lerpf(camera.size,zoom,1-exp(-delta*5))
@@ -90,9 +90,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			_pause(not get_tree().paused)
 	elif event is InputEventMouseButton and event.pressed:
 		if event.button_index==MOUSE_BUTTON_WHEEL_UP:
-			zoom=clampf(zoom-2,24,55)
+			zoom=clampf(zoom-2,18,55)
 		elif event.button_index==MOUSE_BUTTON_WHEEL_DOWN:
-			zoom=clampf(zoom+2,24,55)
+			zoom=clampf(zoom+2,18,55)
 
 func _inputs() -> void:
 	var bindings := {"accelerate":[KEY_W,KEY_UP],"reverse":[KEY_S,KEY_DOWN],"left":[KEY_A,KEY_LEFT],"right":[KEY_D,KEY_RIGHT],"handbrake":[KEY_SPACE],"reset":[KEY_R],"map":[KEY_M],"pause":[KEY_ESCAPE]}
@@ -109,24 +109,24 @@ func _environment() -> void:
 	var node := WorldEnvironment.new()
 	var env := Environment.new()
 	env.background_mode=Environment.BG_COLOR
-	env.background_color=Color("b3b7a1")
+	env.background_color=Color("c8bcaa")
 	env.ambient_light_source=Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color=Color("959db6")
-	env.ambient_light_energy=0.42
-	env.tonemap_mode=Environment.TONE_MAPPER_FILMIC
+	env.ambient_light_color=Color("aea2d5")
+	env.ambient_light_energy=0.65
+	env.tonemap_mode=Environment.TONE_MAPPER_ACES
 	env.fog_enabled=true
-	env.fog_light_color=Color("b1b79b")
-	env.fog_density=0.0018
+	env.fog_light_color=Color("d0bba7")
+	env.fog_density=0.0012
 	env.ssao_enabled=true
 	env.ssao_radius=1.6
-	env.ssao_intensity=1.4
-	env.ssao_light_affect=0.25
+	env.ssao_intensity=1.7
+	env.ssao_light_affect=0.35
 	node.environment=env
 	add_child(node)
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees=Vector3(-48,-32,0)
-	sun.light_color=Color("fff4e7")
-	sun.light_energy=0.78
+	sun.light_color=Color("ffe6bc")
+	sun.light_energy=1.05
 	sun.shadow_enabled=true
 	sun.directional_shadow_max_distance=130
 	sun.shadow_bias=0.025

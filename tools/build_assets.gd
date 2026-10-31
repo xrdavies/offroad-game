@@ -20,10 +20,14 @@ func _initialize() -> void:
 	_begin("ScoutWheel")
 	_wheel(Vector3.ZERO, 0.48)
 	_save("scout_wheel")
-	for i in 3:
+	for i in 6:
 		_begin("Wreck%d" % i)
 		_wreck(i)
 		_save("wreck_%d" % i)
+	for i in 4:
+		_begin("Salvage%d" % i)
+		_salvage(i)
+		_save("salvage_%d" % i)
 	_begin("ServiceGarage")
 	_garage()
 	_save("garage")
@@ -60,7 +64,7 @@ func _initialize() -> void:
 	_begin("Relay")
 	_relay()
 	_save("relay")
-	print("ASSETS_OK: 15 original reusable model scenes baked")
+	print("ASSETS_OK: 22 original reusable model scenes baked")
 	quit()
 
 func _begin(asset_name: String) -> void:
@@ -74,6 +78,7 @@ func _save(file_name: String) -> void:
 	var visual := MeshInstance3D.new()
 	visual.name = "Model"
 	visual.mesh = surface.commit()
+	assert(visual.mesh.get_surface_count() == 1 and visual.mesh.get_aabb().size.length() > 0.1)
 	var material := StandardMaterial3D.new()
 	material.vertex_color_use_as_albedo = true
 	material.vertex_color_is_srgb = false
@@ -134,6 +139,28 @@ func _collision(pos: Vector3, size: Vector3, rot := Vector3.ZERO) -> void:
 	collider.add_child(shape)
 	shape.owner = root_asset
 
+func _beam(a: Vector3, b: Vector3, width: float, color: Color) -> void:
+	var direction := (b-a).normalized()
+	var up := Vector3.UP if absf(direction.y)<0.99 else Vector3.FORWARD
+	_box((a+b)*0.5,Vector3(width,width,a.distance_to(b)),color,Basis.looking_at(direction,up).get_euler())
+
+func _chips(pos: Vector3, size: Vector2, color: Color, seed_value: int, vertical := false) -> void:
+	var random := RandomNumberGenerator.new()
+	random.seed=seed_value
+	var centers: Array[Vector2]=[]
+	for i in 4:
+		centers.append(Vector2(random.randf_range(-0.32,0.32)*size.x,random.randf_range(-0.32,0.32)*size.y))
+	for i in 28:
+		var center := centers[i%4]
+		var u := clampf(snappedf(center.x+random.randfn(0,size.x*0.1),0.09),-size.x/2,size.x/2)
+		var v := clampf(snappedf(center.y+random.randfn(0,size.y*0.1),0.09),-size.y/2,size.y/2)
+		var patch := Vector3(random.randf_range(0.08,0.22),0.012,random.randf_range(0.09,0.3))
+		var offset := Vector3(u,0,v)
+		if vertical:
+			patch=Vector3(patch.x,patch.z,patch.y)
+			offset=Vector3(u,v,0)
+		_box(pos+offset,patch,color.lightened(random.randf_range(-0.12,0.08)))
+
 func _wheel(pos: Vector3, radius: float) -> void:
 	_cylinder(pos, radius, 0.38, palette.rubber, 12, Vector3(0,0,PI/2))
 	_cylinder(pos, radius * 0.53, 0.405, palette.steel, 8, Vector3(0,0,PI/2))
@@ -179,24 +206,105 @@ func _vehicle() -> void:
 	_cylinder(Vector3(0,0.76,2.16),0.22,0.04,palette.steel,8,Vector3(PI/2,0,0))
 	_box(Vector3(0.94,1.28,-0.85),Vector3(0.09,1.6,0.1),palette.dark)
 	_box(Vector3(-0.76,0.9,1.92),Vector3(0.38,0.6,0.22),palette.green)
+	for x in [-0.4,0.4]:
+		_box(Vector3(x,0.94,-0.698),Vector3(0.68,0.43,0.025),Color("8495b1"))
+		_beam(Vector3(x-0.2,0.76,-0.72),Vector3(x+0.1,0.88,-0.72),0.025,palette.dark)
+		_box(Vector3(x,0.03,-2.14),Vector3(0.14,0.14,0.12),palette.red)
+	for x in [-0.96,0.96]:
+		for z in [-0.43,0.43]:
+			_box(Vector3(x,0.37,z),Vector3(0.025,0.3,0.025),palette.paint.darkened(0.2))
+		for z in [-1.0,-1.15,-1.3]:
+			_box(Vector3(x,0.52,z),Vector3(0.025,0.055,0.09),palette.dark)
+		_box(Vector3(x,0.18,0.1),Vector3(0.03,0.1,1.45),palette.sand)
+	_box(Vector3(0,0.24,2.07),Vector3(0.4,0.13,0.025),palette.cream)
+	_chips(Vector3(0,0.79,-1.25),Vector2(1.6,0.9),palette.paint,71)
 
 func _wreck(kind: int) -> void:
-	var paint: Color = [Color("a7a69a"), Color("79928c"), Color("ad8273")][kind]
-	_box(Vector3(0,0.55,0),Vector3(1.85,0.55,3.9),paint,Vector3(0,0,0.03),true)
-	_box(Vector3(0,1.0,0.1),Vector3(1.55,0.55,1.65),palette.dark)
-	_box(Vector3(0,1.3,0.18),Vector3(1.65,0.13,1.85),paint.darkened(0.08),Vector3(0,0,-0.06))
-	for x in [-0.78,0.78]:
-		for z in [-0.72,0.35,0.95]:
-			_box(Vector3(x,1,z),Vector3(0.11,0.58,0.1),paint)
-		for z in [-1.25,1.25]:
-			_wheel(Vector3(x*1.15,0.35,z),0.34)
-		_box(Vector3(x*1.2,0.72,0.2),Vector3(0.04,0.15,0.4),palette.rust)
-	_box(Vector3(0,0.8,-1.3),Vector3(1.7,0.08,1.1),paint.lightened(0.12),Vector3(-0.08,0,0))
-	_box(Vector3(0,0.42,-2),Vector3(1.85,0.13,0.12),palette.steel)
-	for x in [-0.6,0.6]:
-		_box(Vector3(x,0.67,-1.98),Vector3(0.33,0.18,0.04),palette.cream)
-	for i in 9:
-		_box(Vector3(sin(i*5.3)*0.7,0.84,cos(i*4.7)*1.5),Vector3(0.2,0.02,0.16),palette.rust)
+	var paint: Color = [Color("c7b9a0"),Color("7d9e9b"),Color("bb8c7d"),Color("c9c3a8"),Color("939a78"),Color("76645f")][kind]
+	var roof_y := 1.57 if kind==3 else 1.31
+	var rear := 1.45 if kind in [1,3] else 0.64
+	if kind==2:
+		rear=0.15
+	var roof_z := (-0.36+rear)*0.5
+	_box(Vector3(0,0.3,0),Vector3(1.58,0.17,3.8),palette.rust)
+	_collision(Vector3(0,0.57,0),Vector3(1.82,0.65,3.85))
+	_collision(Vector3(0,1.04,roof_z),Vector3(1.5,roof_y-0.7,rear+0.6))
+	_box(Vector3(0,0.49,0.1),Vector3(1.5,0.12,2.8),palette.dark)
+	# Empty windows and missing panels expose seats, engine and wheel arches.
+	for x in [-0.88,0.88]:
+		for z in [-1.22,1.22]:
+			_box(Vector3(x,0.82,z),Vector3(0.16,0.14,1.04),paint)
+			if not (kind==4 and x>0) and not (kind==5 and z<0):
+				_wheel(Vector3(x,0.36,z),0.34)
+			else:
+				_cylinder(Vector3(x,0.28,z),0.13,0.14,palette.rust,8,Vector3(0,0,PI/2))
+		for z in [-1.88,-0.67,0.67,1.87]:
+			_box(Vector3(x,0.57,z),Vector3(0.15,0.46,0.22),paint)
+		if not (kind==5 and x>0):
+			var door_angle := -0.55 if kind==4 and x>0 else 0.0
+			_box(Vector3(x+(0.2 if door_angle else 0.0),0.63,-0.05),Vector3(0.09,0.5,1.12),paint,Vector3(0,door_angle,0))
+			_box(Vector3(x*1.06,0.8,0.18),Vector3(0.035,0.05,0.17),palette.dark)
+		_box(Vector3(x,0.43,0),Vector3(0.12,0.09,1.9),palette.rust)
+		_beam(Vector3(x,0.88,-0.78),Vector3(x*0.86,roof_y,-0.36),0.09,paint)
+		_beam(Vector3(x*0.86,roof_y,rear),Vector3(x,0.86,rear+0.32),0.1,paint)
+		if kind in [1,3]:
+			_box(Vector3(x*0.91,1.1,0.5),Vector3(0.09,roof_y-0.8,0.1),paint)
+		for j in 10:
+			_box(Vector3(x*1.08,0.48+(j%3)*0.1,-1.75+j*0.36),Vector3(0.02,0.08,0.13),palette.rust)
+		_box(Vector3(x*0.45,0.68,0.16),Vector3(0.52,0.28,0.53),Color("514d49"))
+		_box(Vector3(x*0.45,0.87,0.41),Vector3(0.52,0.48,0.13),Color("645d54"),Vector3(0.12,0,0))
+	if kind!=5:
+		_box(Vector3(0,roof_y,roof_z),Vector3(1.57,0.1,rear+0.86),paint,Vector3(0.02,0,-0.04 if kind==4 else 0))
+		_chips(Vector3(0,roof_y+0.06,roof_z),Vector2(1.3,rear+0.65),palette.rust,kind+83)
+	else:
+		_beam(Vector3(-0.76,roof_y,-0.36),Vector3(0.76,roof_y,-0.36),0.1,paint)
+	_box(Vector3(0,0.76,-0.68),Vector3(1.6,0.2,0.2),palette.dark)
+	_box(Vector3(0,0.6,-1.28),Vector3(0.85,0.4,0.65),palette.steel)
+	for x in [-0.25,0,0.25]:
+		_box(Vector3(x,0.83,-1.28),Vector3(0.08,0.08,0.55),palette.dark)
+	if kind not in [4,5]:
+		_box(Vector3(0,0.87,-1.34),Vector3(1.65,0.07,1.04),paint,Vector3(-0.07,0,0.025))
+		_chips(Vector3(0,0.92,-1.3),Vector2(1.4,0.75),palette.rust,kind+39)
+	elif kind==4:
+		_box(Vector3(0,1.14,-0.99),Vector3(1.65,0.07,1.04),paint,Vector3(-0.7,0,-0.08))
+	if kind==2:
+		_box(Vector3(0,0.58,1.15),Vector3(1.6,0.07,1.4),palette.rust)
+		for x in [-0.86,0.86]:
+			_box(Vector3(x,0.9,1.15),Vector3(0.12,0.48,1.5),paint)
+	else:
+		_box(Vector3(0,0.84,1.65),Vector3(1.68,0.09,0.6),paint)
+		_chips(Vector3(0,0.9,1.65),Vector2(1.4,0.4),palette.rust,kind+11)
+	_box(Vector3(0,0.64,1.93),Vector3(1.76,0.4,0.1),paint)
+	_box(Vector3(0,0.57,-1.94),Vector3(1.74,0.4,0.1),palette.dark)
+	for x in [-0.63,0.63]:
+		_box(Vector3(x,0.68,-2.01),Vector3(0.35,0.19,0.04),palette.cream if kind%2 else palette.rust)
+	for x in range(-3,4):
+		_box(Vector3(x*0.13,0.59,-2.01),Vector3(0.035,0.15,0.02),palette.steel)
+	_box(Vector3(0,0.37,-2.02),Vector3(1.87,0.11,0.13),palette.steel,Vector3(0,0,0.06))
+
+func _salvage(kind: int) -> void:
+	if kind==0:
+		# Hollow tire: the hole remains readable when piled on its side.
+		for i in 12:
+			var a := i*TAU/12.0
+			_box(Vector3(cos(a)*0.32,0,sin(a)*0.32),Vector3(0.2,0.24,0.17),palette.rubber,Vector3(0,-a,0))
+	elif kind==1:
+		_box(Vector3(0,0,0),Vector3(0.85,1.15,0.65),palette.cream)
+		_box(Vector3(0,0.02,0.34),Vector3(0.69,0.91,0.04),palette.dark)
+		_cylinder(Vector3(0,-0.09,0.39),0.27,0.07,palette.steel,10,Vector3(PI/2,0,0))
+		_cylinder(Vector3(0,-0.09,0.44),0.19,0.04,palette.dark,10,Vector3(PI/2,0,0))
+		_box(Vector3(0,0.4,0.39),Vector3(0.62,0.12,0.04),palette.cream)
+		_chips(Vector3(0,0.59,0),Vector2(0.7,0.5),palette.rust,36)
+	elif kind==2:
+		_box(Vector3(0,0,0),Vector3(1.6,0.05,0.95),Color("8b9e9b"))
+		for x in range(-4,5):
+			_box(Vector3(x*0.17,0.05,0),Vector3(0.07,0.06,0.95),palette.steel)
+		_chips(Vector3(0,0.09,0),Vector2(1.4,0.8),palette.rust,17)
+	else:
+		for x in [-0.45,0.45]:
+			_box(Vector3(x,0,0),Vector3(0.12,0.3,1.9),palette.rust)
+		for z in [-0.8,0,0.8]:
+			_box(Vector3(0,0,z),Vector3(1.02,0.26,0.12),palette.steel)
 
 func _garage() -> void:
 	_box(Vector3(0,0.13,0),Vector3(12,0.26,8),palette.sand,Vector3.ZERO,true)
@@ -216,6 +324,30 @@ func _garage() -> void:
 	_box(Vector3(0,3.22,5.3),Vector3(12,0.16,3.6),palette.edge)
 	for i in 7:
 		_box(Vector3(-5.3+i*1.7,0.48,3.8),Vector3(0.8,0.3,0.05),palette.rust)
+	_chips(Vector3(0,4.22,0),Vector2(11.8,7.8),palette.dark,14)
+	_chips(Vector3(-3.8,1.8,3.8),Vector2(3.5,2.8),palette.sand,24,true)
+	_box(Vector3(3.5,4.55,-1.9),Vector3(2.3,0.7,1.5),palette.steel)
+	for x in range(10):
+		_box(Vector3(2.5+x*0.22,4.93,-1.9),Vector3(0.07,0.035,1.3),palette.dark)
+	for x in [1.0,3.8]:
+		_box(Vector3(x,2.95,3.62),Vector3(2.5,0.65,0.15),palette.steel)
+		for y in range(5):
+			_box(Vector3(x,2.7+y*0.12,3.73),Vector3(2.5,0.035,0.07),palette.dark)
+	_box(Vector3(-5.8,1.7,3.94),Vector3(0.12,3.4,0.13),palette.rust)
+	_box(Vector3(5.85,1.6,2.4),Vector3(0.12,3.2,0.13),palette.rust)
+	_box(Vector3(0,3.53,7.13),Vector3(11.8,0.32,0.12),palette.red)
+	for x in range(-5,6):
+		_box(Vector3(x,3.54,7.21),Vector3(0.16,0.34,0.025),palette.cream)
+	_box(Vector3(5.89,0.65,0),Vector3(0.06,0.7,7.1),palette.green)
+	for z in [-1.8,1.2]:
+		_box(Vector3(5.91,2.4,z),Vector3(0.06,1.2,1.8),palette.glass)
+		for offset in [-0.85,0,0.85]:
+			_box(Vector3(5.95,2.4,z+offset),Vector3(0.08,1.24,0.065),palette.edge)
+		_box(Vector3(6.02,1.77,z),Vector3(0.24,0.12,2.05),palette.sand)
+	for z in [-3.45,3.45]:
+		_box(Vector3(5.9,2.2,z),Vector3(0.12,3.6,0.12),palette.rust)
+	for i in 13:
+		_box(Vector3(5.94,0.4+(i%3)*0.11,-3.1+i*0.5),Vector3(0.04,0.13,0.24),palette.sand)
 
 func _pump() -> void:
 	_box(Vector3(0,0.12,0),Vector3(1.25,0.24,1.0),palette.cream,Vector3.ZERO,true)
@@ -238,14 +370,28 @@ func _container() -> void:
 		_box(Vector3(3.03,1.4,z),Vector3(0.08,2.5,0.07),palette.edge)
 
 func _palm() -> void:
-	for i in 12:
-		var x := pow(i/12.0,2)*0.85
-		_cylinder(Vector3(x,i*0.44+0.22,0),0.24-i*0.007,0.46,palette.rust.lightened((i%2)*0.09),6)
-	for i in 9:
-		var a := i*TAU/9.0
-		for j in 4:
-			var d := 0.4+j*0.65
-			_box(Vector3(0.85+cos(a)*d,5.5-j*j*0.11,sin(a)*d),Vector3(0.85,0.1,0.48-j*0.07),Color("85865a").darkened((i%3)*0.09),Vector3(0,-a,j*0.16))
+	for i in 24:
+		var x := pow(i/24.0,2)*0.85
+		_cylinder(Vector3(x,i*0.22+0.11,0),0.24-i*0.0035,0.23,palette.rust.lightened((i%3)*0.065),7)
+	for i in 11:
+		var a := i*TAU/11.0
+		var forward := Vector3(cos(a),0,sin(a))
+		var side := Vector3(-sin(a),0,cos(a))
+		var length := 3.2+(i%3)*0.35
+		var previous := Vector3(0.85,5.3,0)
+		for j in range(1,10):
+			var t := j/9.0
+			var spine := Vector3(0.85,5.3+sin(t*PI)*0.6-t*t*1.7,0)+forward*t*length
+			_beam(previous,spine,0.055,Color("9c965d"))
+			for sign_value in [-1,1]:
+				var tip: Vector3=spine+side*sign_value*sin(t*PI)*0.85+forward*0.4-Vector3.UP*0.26
+				var c := Color("92934e").darkened((i%3)*0.09+(j%2)*0.05)
+				var edge := spine-forward*0.18
+				_triangle(edge,spine+forward*0.15,tip,c)
+				_triangle(edge,tip,spine+forward*0.15,c.darkened(0.15))
+			previous=spine
+	for i in 5:
+		_cylinder(Vector3(0.85+sin(i*4)*0.15,5.15,cos(i*4)*0.15),0.16,0.3,palette.dark,6)
 	_collision(Vector3(0.35,2.4,0),Vector3(0.5,4.8,0.5))
 
 func _pole() -> void:
@@ -260,8 +406,13 @@ func _fence() -> void:
 		_box(Vector3(x,1.1,0),Vector3(0.12,2.2,0.12),palette.steel)
 	for y in [0.35,1.15,2]:
 		_box(Vector3(0,y,0),Vector3(5,0.06,0.06),palette.steel)
-	for i in 24:
-		_box(Vector3(-2.4+i*0.2,1.15,0),Vector3(0.025,1.7,0.025),palette.steel)
+	for slope in [-1.0,1.0]:
+		for i in range(-14,15):
+			var start_x := i*0.3
+			var t0 := maxf(0.0,(-2.5-start_x)*slope if slope>0 else (2.5-start_x)*slope)
+			var t1 := minf(1.65,(2.5-start_x)*slope if slope>0 else (-2.5-start_x)*slope)
+			if t1>t0:
+				_beam(Vector3(start_x+t0*slope,0.35+t0,0),Vector3(start_x+t1*slope,0.35+t1,0),0.022,palette.cream)
 	_collision(Vector3(0,1,0),Vector3(5,2,0.15))
 
 func _tank() -> void:

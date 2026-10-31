@@ -3,11 +3,13 @@ extends Node3D
 const ROUTE_PATH := "res://assets/world/route.json"
 const WATER_LEVEL := 0.72
 const SIZE := Vector2(150,130)
+const SCRAP_CENTERS := [Vector2(-88,-24),Vector2(-61,29),Vector2(77,-73)]
 var layout: Dictionary
 var landmarks: Array = []
 var road_points := PackedVector3Array()
 var rng := RandomNumberGenerator.new()
 var terrain_mesh: ArrayMesh
+var grass_mesh: ArrayMesh
 var models: Dictionary = {}
 
 func _ready() -> void:
@@ -25,17 +27,28 @@ func _ready() -> void:
 	_build_boundary()
 
 func river_x(z: float) -> float:
-	return 32.0 + 7.0 * sin(z * 0.025)
+	return 32.0+7.0*sin(z*0.025)+2.2*sin(z*0.11)
+
+func river_widening(z: float) -> float:
+	return 3.8*exp(-pow((z+15.0)/21.0,2))+0.55*sin(z*0.43)+0.3*cos(z*0.71)
 
 func height_at(x: float, z: float) -> float:
 	var base := 2.1 + sin(x*0.065)*cos(z*0.052)*0.48
 	base += 5.0 * exp(-pow((x-96.0)/33.0,2)-pow((z-8.0)/40.0,2))
 	base += 3.5 * exp(-pow((x+15.0)/40.0,2)-pow((z+98.0)/27.0,2))
-	var bank := smoothstep(3.5,12.0,abs(x-river_x(z)))
+	base += scrap_height_at(x,z)
+	var widening := river_widening(z)
+	var bank := smoothstep(3.5+widening,12.0+widening,abs(x-river_x(z)))
 	base = lerpf(0.12,base,bank)
 	var workshop := 1.0 - smoothstep(10.0,21.0,Vector2(x+14,z-5).length())
 	base = lerpf(base,2.1,workshop)
 	return base
+
+func scrap_height_at(x: float,z: float) -> float:
+	var height := 0.0
+	for center in SCRAP_CENTERS:
+		height += 6.5*exp(-pow((x-center.x)/10.0,2)-pow((z-center.y)/12.0,2))
+	return height
 
 func road_distance(point: Vector2) -> float:
 	var result := INF
@@ -46,7 +59,7 @@ func road_distance(point: Vector2) -> float:
 	return result
 
 func surface_at(point: Vector3) -> String:
-	if absf(point.x-river_x(point.z)) < 8.0 and point.y < WATER_LEVEL+1.0:
+	if height_at(point.x,point.z) < WATER_LEVEL and point.y < WATER_LEVEL+1.0:
 		return "water"
 	if road_distance(Vector2(point.x,point.z)) < 3.5:
 		return "road"
@@ -76,9 +89,15 @@ func _build_terrain() -> void:
 			var b := Vector3(x+2,height_at(x+2,z),z)
 			var c := Vector3(x+2,height_at(x+2,z+2),z+2)
 			var d := Vector3(x,height_at(x,z+2),z+2)
-			var color := Color("918970").lerp(Color("9b9076"),rng.randf()*0.45)
-			if absf(x-river_x(z))<12:
-				color = Color("6b7771").lerp(Color("8b8c78"),rng.randf())
+			var patch := sin(x*0.12+sin(z*0.09)*2.0)*cos(z*0.11)
+			var color := Color("8c8075").lerp(Color("a39973"),patch*0.5+0.5)
+			color=color.lightened(rng.randf_range(-0.008,0.008))
+			if x < -45 and z > -42 and z < 19:
+				color=color.lerp(Color("887b7c"),0.5)
+			if scrap_height_at(x,z)>0.6:
+				color=color.lerp(Color("696760"),0.65)
+			var shore := 1.0-smoothstep(8.0+river_widening(z),14.0+river_widening(z),absf(x-river_x(z)))
+			color=color.lerp(Color("7e887c"),shore*0.8)
 			if x>77:
 				color = color.lerp(Color("9f7662"),0.5)
 			_tri(st,a,b,c,color)
@@ -109,9 +128,9 @@ func _build_road() -> void:
 		b.y=height_at(b.x,b.z)+0.09
 		c.y=height_at(c.x,c.z)+0.09
 		d.y=height_at(d.x,d.z)+0.09
-		var color := Color("686c66").lightened(rng.randf()*0.045)
-		_tri(st,a,d,c,color)
-		_tri(st,a,c,b,color)
+		var color := Color("60626a").lightened(rng.randf()*0.025)
+		_tri(st,a,d,c,color,[Vector2(-1,i),Vector2(-1,i+1),Vector2(1,i+1)])
+		_tri(st,a,c,b,color,[Vector2(-1,i),Vector2(1,i+1),Vector2(1,i)])
 		if i%4==0 and absf(p.x-river_x(p.z))>12:
 			var marking := _box(Vector3(p.x,height_at(p.x,p.z)+0.1,p.z),Vector3(0.12,0.02,1.6),Color("c2bda4"))
 			marking.rotation.y = atan2(right.z,-right.x)
@@ -152,12 +171,16 @@ func _build_river() -> void:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for z in range(-130,130,2):
-		var a := Vector3(river_x(z)-7.4,WATER_LEVEL,z)
-		var b := Vector3(river_x(z)+7.4,WATER_LEVEL,z)
-		var c := Vector3(river_x(z+2)+7.4,WATER_LEVEL,z+2)
-		var d := Vector3(river_x(z+2)-7.4,WATER_LEVEL,z+2)
-		_tri(st,a,b,c,Color("426d6c"))
-		_tri(st,a,c,d,Color("426d6c"))
+		for x in range(-14,14):
+			var a := Vector3(river_x(z)+x,WATER_LEVEL,z)
+			var b := Vector3(river_x(z)+x+1,WATER_LEVEL,z)
+			var c := Vector3(river_x(z+2)+x+1,WATER_LEVEL,z+2)
+			var d := Vector3(river_x(z+2)+x,WATER_LEVEL,z+2)
+			var depths: Array[Vector2]=[]
+			for p in [a,b,c,d]:
+				depths.append(Vector2(WATER_LEVEL-height_at(p.x,p.z),0))
+			_tri(st,a,b,c,Color.WHITE,[depths[0],depths[1],depths[2]])
+			_tri(st,a,c,d,Color.WHITE,[depths[0],depths[2],depths[3]])
 	var water := MeshInstance3D.new()
 	water.mesh=st.commit()
 	var material := ShaderMaterial.new()
@@ -167,7 +190,7 @@ func _build_river() -> void:
 	var foam: Array[Transform3D]=[]
 	for i in 550:
 		var z := rng.randf_range(-128,128)
-		var x := river_x(z)+rng.randf_range(-7.3,7.3)
+		var x := river_x(z)+rng.randf_range(-11,11)
 		if height_at(x,z)>WATER_LEVEL-0.1:
 			continue
 		foam.append(Transform3D(Basis.IDENTITY.scaled(Vector3(rng.randf_range(0.2,1.3),0.015,0.07)),Vector3(x,WATER_LEVEL+0.025,z)))
@@ -213,63 +236,81 @@ func _build_places() -> void:
 
 func _build_scrap() -> void:
 	for i in 63:
-		var x := -82.0+(i%7)*5.3+rng.randf_range(-0.3,0.3)
-		var z := -38.0+floori(i/7.0)*6.2+rng.randf_range(-0.35,0.35)
+		var x := -82.0+(i%7)*5.3+rng.randf_range(-0.8,0.8)
+		var z := -38.0+floori(i/7.0)*6.2+rng.randf_range(-0.9,0.9)
 		if absf(x+65)<3 or absf(z+12)<3:
 			continue
-		var wreck := _asset("wreck_%d"%(i%3),Vector3(x,0,z),rng.randf_range(-0.18,0.18)+PI/2)
-		wreck.rotation.z=rng.randf_range(-0.07,0.07)
+		var wreck := _asset("wreck_%d"%(i%6),Vector3(x,-0.04,z),rng.randf_range(-0.45,0.45)+PI/2+(PI if i%4==0 else 0.0))
+		wreck.rotation.z=rng.randf_range(-0.1,0.1)
+		if i%9==0:
+			_asset("wreck_5",Vector3(x,1.2,z),wreck.rotation.y+0.14)
 	for p in [Vector3(-30,0,23),Vector3(12,0,-70),Vector3(66,0,-44),Vector3(48,0,48),Vector3(-9,0,-35)]:
 		_asset("wreck_1",p,rng.randf_range(0,TAU))
-	var scrap: Array[Transform3D]=[]
-	for i in 3400:
-		var center: Vector2 = [Vector2(-88,-24),Vector2(-61,29),Vector2(77,-73)][i%3]
-		var offset := Vector2(rng.randfn(0,8.0),rng.randfn(0,9.0))
-		var p := center+offset
-		var h := maxf(0,3.4-offset.length()*0.18)*rng.randf()
-		var basis := Basis.from_euler(Vector3(rng.randf(),rng.randf()*TAU,rng.randf()))
-		basis=basis.scaled(Vector3(rng.randf_range(0.15,0.9),rng.randf_range(0.1,0.55),rng.randf_range(0.15,1.2)))
-		scrap.append(Transform3D(basis,Vector3(p.x,height_at(p.x,p.y)+h,p.y)))
-	_multimesh(scrap,BoxMesh.new(),Color("87867b"),true,[Color("9e9e91"),Color("7c9390"),Color("936d5d"),Color("b2a68a"),Color("606c69"),Color("a2a59e")])
-	for p in [Vector3(-88,0,-24),Vector3(-61,0,29),Vector3(77,0,-73)]:
-		var body := StaticBody3D.new()
-		body.position=Vector3(p.x,height_at(p.x,p.z)-1,p.z)
-		var shape := CollisionShape3D.new()
-		var sphere := SphereShape3D.new()
-		sphere.radius=6.0
-		shape.shape=sphere
-		body.add_child(shape)
-		add_child(body)
+	# Terrain and its collision form the heap; debris sits on that shared surface.
+	for kind in 4:
+		var scrap: Array[Transform3D]=[]
+		for i in [3600,1200,3600,2400][kind]:
+			var center: Vector2=SCRAP_CENTERS[i%3]
+			var p := center+Vector2(rng.randfn(0,7.4),rng.randfn(0,8.8))
+			if road_distance(p)<5.5:
+				continue
+			var scale_value := rng.randf_range(0.45,1.0)
+			var basis := Basis.from_euler(Vector3(rng.randf_range(-1,1),rng.randf()*TAU,rng.randf_range(-1,1))).scaled(Vector3.ONE*scale_value)
+			scrap.append(Transform3D(basis,Vector3(p.x,height_at(p.x,p.y)+0.13,p.y)))
+		var id := "salvage_%d"%kind
+		models[id]=load("res://assets/models/"+id+".tscn")
+		var source: Node3D=models[id].instantiate()
+		_multimesh(scrap,source.get_node("Model").mesh,Color.WHITE,true)
+		source.free()
+	for p in [Vector3(-76,0,-18),Vector3(-54,0,0),Vector3(-70,0,12),Vector3(-23,0,15)]:
+		for j in 4:
+			_asset("salvage_0",p+Vector3(0,0.15+j*0.25,0),j*0.3)
 
 func _build_vegetation() -> void:
 	var grass: Array[Transform3D]=[]
+	var grass_colors: Array[Color]=[]
 	var pebbles: Array[Transform3D]=[]
-	for i in 58000:
+	var field := FastNoiseLite.new()
+	field.seed=int(layout.seed)
+	field.frequency=0.065
+	field.fractal_octaves=2
+	for i in 180000:
 		var x := rng.randf_range(-140,140)
 		var z := rng.randf_range(-120,120)
 		var y := height_at(x,z)
-		if y<WATER_LEVEL or road_distance(Vector2(x,z))<4.5 or Vector2(x+14,z-5).length()<12:
+		var density := field.get_noise_2d(x,z)
+		if density < -0.12 or y<WATER_LEVEL or scrap_height_at(x,z)>0.8 or Vector2(x+14,z-5).length()<12:
 			continue
-		if i%3==0:
-			pebbles.append(Transform3D(Basis.from_euler(Vector3(0,rng.randf()*TAU,0)).scaled(Vector3(rng.randf_range(0.08,0.4),0.06,rng.randf_range(0.08,0.4))),Vector3(x,y+0.02,z)))
-		else:
-			var s := rng.randf_range(0.4,1.1)
-			grass.append(Transform3D(Basis.from_euler(Vector3(0,rng.randf()*TAU,0)).scaled(Vector3(s,s,s)),Vector3(x,y,z)))
+		if x < -45 and x > -86 and z > -42 and z < 19 and (absf(x+65)<2 or absf(z+12)<2):
+			continue
+		if road_distance(Vector2(x,z))<4.2:
+			continue
+		var s := rng.randf_range(0.65,1.15)*(0.6+maxf(0,density)*0.9)
+		grass.append(Transform3D(Basis.from_euler(Vector3(0,rng.randf()*TAU,0)).scaled(Vector3(s,s,s)),Vector3(x,y,z)))
+		var color := Color("b8af6e").lerp(Color("8d9654"),clampf(density*2,0,1))
+		if x < -45 and z > -42 and z < 19:
+			color=color.lerp(Color("b27667"),smoothstep(0.05,0.3,field.get_noise_2d(x+80,z)))
+		grass_colors.append(color)
+		if i%8==0:
+			pebbles.append(Transform3D(Basis.from_euler(Vector3(0,rng.randf()*TAU,0)).scaled(Vector3(rng.randf_range(0.06,0.2),0.035,rng.randf_range(0.06,0.3))),Vector3(x,y+0.01,z)))
 	var tuft := SurfaceTool.new()
 	tuft.begin(Mesh.PRIMITIVE_TRIANGLES)
-	for i in 6:
-		var x := sin(i*4.3)*0.22
-		var z := cos(i*3.1)*0.22
-		var a := Vector3(x-0.04,0,z)
-		var b := Vector3(x+0.05,0,z)
-		var c := Vector3(x+sin(i)*0.17,0.3+(i%3)*0.12,z+0.12)
-		_tri(tuft,a,b,c,Color.WHITE)
-	_multimesh(grass,tuft.commit(),Color("b1a46e"),true)
-	_multimesh(pebbles,BoxMesh.new(),Color("b4ad94"),true)
+	for i in 9:
+		var x := sin(i*4.3)*0.33
+		var z := cos(i*3.1)*0.33
+		var a := Vector3(x-0.045,0,z)
+		var b := Vector3(x+0.045,0,z)
+		var c := Vector3(x+0.08,0.27+(i%3)*0.12,z+0.07)
+		var d := c-Vector3(0.06,-0.04,0)
+		_tri(tuft,a,b,c,Color("c1be96"))
+		_tri(tuft,a,c,d,Color.WHITE)
+	grass_mesh=tuft.commit()
+	_multimesh(grass,grass_mesh,Color.WHITE,true,grass_colors)
+	_multimesh(pebbles,BoxMesh.new(),Color("a69c8d"),true)
 	for i in 55:
 		var x := rng.randf_range(-100,110)
 		var z := rng.randf_range(-110,100)
-		if road_distance(Vector2(x,z))<9 or height_at(x,z)<WATER_LEVEL or Vector2(x+14,z-5).length()<18:
+		if road_distance(Vector2(x,z))<9 or height_at(x,z)<WATER_LEVEL or Vector2(x+14,z-5).length()<18 or scrap_height_at(x,z)>0.8:
 			continue
 		var palm := _asset("palm",Vector3(x,0,z),rng.randf()*TAU)
 		palm.scale=Vector3.ONE*rng.randf_range(0.75,1.2)
@@ -278,19 +319,46 @@ func _build_cliffs() -> void:
 	for data in [[Vector2(-115,-54),Vector2(15,18),7],[Vector2(100,-35),Vector2(16,12),8],[Vector2(-40,-104),Vector2(14,10),7],[Vector2(87,44),Vector2(20,14),8]]:
 		var center: Vector2=data[0]
 		var extent: Vector2=data[1]
+		var st := SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		var origin := Vector3(center.x,height_at(center.x,center.y)-0.4,center.y)
+		var outline: Array[Vector3]=[]
+		for i in 44:
+			var angle := i*TAU/44.0
+			var radial := 1.0+sin(i*2.87)*0.065+cos(i*1.07)*0.09
+			outline.append(Vector3(cos(angle)*extent.x,0,sin(angle)*extent.y)*radial)
 		for level in int(data[2]):
-			var mesh := CylinderMesh.new()
-			mesh.radial_segments=7
-			mesh.top_radius=1.0-level*0.065
-			mesh.bottom_radius=1.06-level*0.065
-			mesh.height=0.9
-			var visual := MeshInstance3D.new()
-			visual.mesh=mesh
-			visual.scale=Vector3(extent.x,1,extent.y)
-			visual.position=Vector3(center.x,height_at(center.x,center.y)+level*0.85,center.y)
-			visual.material_override=_material(Color("827d6b").lightened((level%3)*0.06))
-			add_child(visual)
-			visual.create_trimesh_collision()
+			var bottom := 1.0-level*0.055
+			var top := bottom-0.015
+			var drift := Vector3(sin(level*1.7)*0.38,level*0.88,cos(level*1.3)*0.3)
+			for i in outline.size():
+				var next := (i+1)%outline.size()
+				var jag := sin(i*3.7+level*2.3)*0.028
+				var next_jag := sin(next*3.7+level*2.3)*0.028
+				var a := origin+drift+outline[i]*(bottom+jag)
+				var b := origin+drift+outline[next]*(bottom+next_jag)
+				var c := origin+drift+outline[next]*(top+next_jag)+Vector3.UP*0.88
+				var d := origin+drift+outline[i]*(top+jag)+Vector3.UP*0.88
+				var color := Color("89877b").lightened(rng.randf_range(-0.08,0.07)+(level%3)*0.025)
+				_tri(st,a,b,c,color)
+				_tri(st,a,c,d,color)
+				_tri(st,origin+drift+Vector3.UP*0.88,d,c,Color("a39b7f"))
+		var visual := MeshInstance3D.new()
+		visual.mesh=st.commit()
+		var rock_material := ShaderMaterial.new()
+		rock_material.shader=load("res://assets/rock.gdshader")
+		visual.material_override=rock_material
+		add_child(visual)
+		visual.create_trimesh_collision()
+		var plateau: Array[Transform3D]=[]
+		var plateau_y := origin.y+int(data[2])*0.88
+		for i in 380:
+			var p := Vector2(rng.randf_range(-0.4,0.4),rng.randf_range(-0.4,0.4))
+			if p.length()>0.4 or sin(p.x*23)*cos(p.y*19)<-0.2:
+				continue
+			var scale_value := rng.randf_range(0.6,1.2)
+			plateau.append(Transform3D(Basis(Vector3.UP,rng.randf()*TAU).scaled(Vector3.ONE*scale_value),Vector3(center.x+p.x*extent.x,plateau_y,center.y+p.y*extent.y)))
+		_multimesh(plateau,grass_mesh,Color("aaa86a"),true)
 
 func _build_boundary() -> void:
 	# Visible stepped escarpments explain the edge of the drivable survey area.
@@ -350,27 +418,42 @@ func _label(words: String,pos: Vector3,pixel_size: float) -> void:
 	add_child(label)
 
 func _multimesh(transforms: Array[Transform3D], mesh: Mesh, color: Color, varied := false, colors: Array[Color]=[]) -> void:
-	var batch := MultiMeshInstance3D.new()
-	var multi := MultiMesh.new()
-	multi.transform_format=MultiMesh.TRANSFORM_3D
-	multi.use_colors=true
-	multi.mesh=mesh
-	multi.instance_count=transforms.size()
+	assert(colors.is_empty() or colors.size()==transforms.size())
+	# Spatial batches let the renderer skip offscreen grass and distant scrap heaps.
+	var chunks: Dictionary={}
 	for i in transforms.size():
-		multi.set_instance_transform(i,transforms[i])
-		var tint := colors[i%colors.size()] if not colors.is_empty() else color
-		multi.set_instance_color(i,(tint.lightened(rng.randf_range(-0.15,0.12)) if varied else tint).srgb_to_linear())
-	batch.multimesh=multi
-	batch.material_override=_vertex_material()
-	batch.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(batch)
+		var p := transforms[i].origin
+		var cell := Vector2i(floori(p.x/32.0),floori(p.z/32.0))
+		if not chunks.has(cell):
+			chunks[cell]=[]
+		chunks[cell].append(i)
+	var material := _vertex_material()
+	for indices in chunks.values():
+		var batch := MultiMeshInstance3D.new()
+		var multi := MultiMesh.new()
+		multi.transform_format=MultiMesh.TRANSFORM_3D
+		multi.use_colors=true
+		multi.mesh=mesh
+		multi.instance_count=indices.size()
+		for j in indices.size():
+			var i: int=indices[j]
+			multi.set_instance_transform(j,transforms[i])
+			var tint := colors[i] if not colors.is_empty() else color
+			multi.set_instance_color(j,(tint.lightened(rng.randf_range(-0.12,0.1)) if varied else tint).srgb_to_linear())
+		batch.multimesh=multi
+		batch.material_override=material
+		batch.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(batch)
 
-func _tri(st: SurfaceTool,a: Vector3,b: Vector3,c: Vector3,color: Color) -> void:
+func _tri(st: SurfaceTool,a: Vector3,b: Vector3,c: Vector3,color: Color,uv: Array[Vector2]=[]) -> void:
 	var normal := (c-a).cross(b-a).normalized()
-	for point in [a,b,c]:
+	var points := [a,b,c]
+	for i in 3:
 		st.set_normal(normal)
 		st.set_color(color.srgb_to_linear())
-		st.add_vertex(point)
+		if not uv.is_empty():
+			st.set_uv(uv[i])
+		st.add_vertex(points[i])
 
 func _vertex_material() -> StandardMaterial3D:
 	var material := _material(Color.WHITE)

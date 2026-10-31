@@ -14,8 +14,10 @@ func _draw() -> void:
 		draw_line(Vector2(0,z/260.0*size.y),Vector2(size.x,z/260.0*size.y),Color(0.7,0.7,0.5,0.08))
 	var water := PackedVector2Array()
 	for z in range(-130,131,5):
-		water.append(_point(Vector2(world.river_x(z),z)))
-	draw_polyline(water,Color("658681"),22,true)
+		water.append(_point(Vector2(world.river_x(z)-6.5-world.river_widening(z),z)))
+	for z in range(130,-131,-5):
+		water.append(_point(Vector2(world.river_x(z)+6.5+world.river_widening(z),z)))
+	draw_colored_polygon(water,Color("658681"))
 	var road := PackedVector2Array()
 	for p in world.road_points:
 		road.append(_point(Vector2(p.x,p.z)))

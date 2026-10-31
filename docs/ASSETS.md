@@ -10,19 +10,20 @@
 | --- | --- |
 | `scout_body.tscn` | 越野车，车窗、行李架、货箱、保险杠、灯、备胎、涉水管 |
 | `scout_wheel.tscn` | 带胎纹、轮毂的独立轮胎，悬挂与转向驱动 |
-| `wreck_0/1/2.tscn` | 三种配色的废车 |
+| `wreck_0` 至 `wreck_5.tscn` | 轿车、旅行车、皮卡、厢式车、掀盖破车与烧毁车壳；空车窗、座椅、发动机、轮拱和成片锈蚀 |
+| `salvage_0` 至 `salvage_3.tscn` | 中空废轮胎、废旧洗衣机、波纹金属板、裸车架；组成垃圾山与场景小物 |
 | `garage.tscn` | 可驶入的修理站、雨棚、门窗、波纹屋顶 |
 | `fuel_pump.tscn` | 油泵与油管 |
 | `container.tscn` | 带波纹与门杆的集装箱 |
-| `palm.tscn` | 分段树干与体素叶片 |
+| `palm.tscn` | 分段树干、弯曲叶轴和成对下垂叶片 |
 | `utility_pole.tscn` | 电线杆与绝缘子，线路由地图连接 |
 | `barrel.tscn` | 锈蚀色金属桶 |
 | `barrier.tscn` | 混凝土路障 |
-| `fence.tscn` | 围栏模块 |
+| `fence.tscn` | 带斜交菱形网的围栏模块 |
 | `water_tank.tscn` | 高架水塔 |
 | `relay.tscn` | 中继设施与天线 |
 
-`world.gd` 还生成层状岩壁、桥梁、地形、路面、植被簇、碎石、彩色废料堆与标牌。草、碎石和废料使用 MultiMesh 合批。水面、道路和地面材质分别位于 `assets/water.gdshader`、`assets/road.gdshader`、`assets/ground.gdshader`。这些是原生几何体和着色器资产，不是位图占位图。
+共 22 个独立模型场景。`world.gd` 还生成不规则层状岩壁、桥梁、地形、路面、成片荒草、碎石、废料山与标牌。垃圾山直接使用可见地形的碰撞面，细小废料作为装饰；草、碎石和废料按 32 米区域使用 MultiMesh 合批，屏幕外区域可被剔除。水面、道路、岩壁和地面材质分别位于 `assets/water.gdshader`、`assets/road.gdshader`、`assets/rock.gdshader`、`assets/ground.gdshader`。浅滩泡沫由水面与河床的深度差控制，道路增加磨损边线与裂纹。这些是原生几何体和着色器资产，不是位图占位图。
 
 ## 音效
 

@@ -37,6 +37,14 @@ var film_mode := 1
 var film_option: OptionButton
 var hud_hidden := false
 var waypoint := Vector2.INF
+var map_index := 0
+var map_history: Dictionary = {}
+var changing_map := false
+var destinations_panel: PanelContainer
+var loading_label: Label
+var map_title: Label
+var sky_material: ProceduralSkyMaterial
+var environment: Environment
 const FILM_MODES := ["DRIVER VIEW", "CHASE", "SIDE TRACK", "DRONE", "DIRECTOR"]
 
 func _ready() -> void:
@@ -70,7 +78,7 @@ func _ready() -> void:
 	_setup_recording()
 
 func _process(delta: float) -> void:
-	if not is_instance_valid(car):
+	if changing_map or not is_instance_valid(car):
 		return
 	camera.zoom=zoom
 	var speed := Vector2(car.linear_velocity.x,car.linear_velocity.z).length()*3.6
@@ -97,6 +105,8 @@ func _process(delta: float) -> void:
 	map_view.queue_redraw()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if changing_map:
+		return
 	if event.is_action_pressed("reset") and not get_tree().paused:
 		car.reset_to_start(spawn_point)
 	elif event.is_action_pressed("map"):
@@ -119,9 +129,13 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("hide_hud"):
 		hud_hidden=not hud_hidden
 		for child in ui.get_children():
-			if child!=pause_panel and child!=garage_panel and child!=map_panel:
+			if child not in [pause_panel,garage_panel,map_panel,destinations_panel,loading_label]:
 				child.visible=not hud_hidden
 	elif event.is_action_pressed("pause"):
+		if destinations_panel.visible:
+			destinations_panel.hide()
+			_pause(false)
+			return
 		if garage_panel.visible:
 			garage_panel.hide()
 			_pause(false)
@@ -150,9 +164,10 @@ func _inputs() -> void:
 func _environment() -> void:
 	var node := WorldEnvironment.new()
 	var env := Environment.new()
+	environment=env
 	env.background_mode=Environment.BG_SKY
 	var sky := Sky.new()
-	var sky_material := ProceduralSkyMaterial.new()
+	sky_material=ProceduralSkyMaterial.new()
 	sky_material.sky_top_color=Color("7894a1")
 	sky_material.sky_horizon_color=Color("d8ccae")
 	sky_material.ground_horizon_color=Color("d8ccae")
@@ -233,14 +248,19 @@ func _ui() -> void:
 	ui.add_child(map_panel)
 	var map_column := VBoxContainer.new()
 	map_panel.add_child(map_column)
-	map_column.add_child(_label("SURVEY MAP   /   CLICK TO SET WAYPOINT   /   M TO CLOSE",16,Color("e8dfbd")))
+	map_title=_label("OLD FRONTIER   /   CLICK TO SET WAYPOINT   /   M TO CLOSE",16,Color("e8dfbd"))
+	map_column.add_child(map_title)
 	map_view=MAP.new()
 	map_view.world=world
 	map_view.car=car
 	map_view.journal=discovered
 	map_view.destination_selected.connect(func(p: Vector2): waypoint=p; _toast("Waypoint set. Follow the dashed trails."))
-	map_view.custom_minimum_size=Vector2(640,470)
+	map_view.custom_minimum_size=Vector2(640,420)
 	map_column.add_child(map_view)
+	var travel := Button.new()
+	travel.text="Explore another map"
+	travel.pressed.connect(_show_destinations)
+	map_column.add_child(travel)
 	map_panel.hide()
 	pause_panel=PanelContainer.new()
 	pause_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
@@ -256,6 +276,10 @@ func _ui() -> void:
 	resume.text="Continue driving"
 	resume.pressed.connect(func(): _pause(false))
 	column.add_child(resume)
+	var destinations := Button.new()
+	destinations.text="Choose expedition map"
+	destinations.pressed.connect(_show_destinations)
+	column.add_child(destinations)
 	column.add_child(_label("MASTER VOLUME",12,Color("d3d1be")))
 	var volume := HSlider.new()
 	volume.min_value=0
@@ -278,7 +302,109 @@ F9 Start / stop video · F10 Open clips",13,Color("e8dfbd")))
 	column.add_child(film_option)
 	column.add_child(quit_button)
 	_build_garage()
+	_build_destinations()
 	pause_panel.hide()
+	loading_label=_label("Preparing expedition…",28,Color("fff0c8"))
+	loading_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	loading_label.position=Vector2(-230,-30)
+	ui.add_child(loading_label)
+	loading_label.hide()
+
+func _build_destinations() -> void:
+	destinations_panel=PanelContainer.new()
+	destinations_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	destinations_panel.position=Vector2(-390,-200)
+	destinations_panel.size=Vector2(780,400)
+	destinations_panel.add_theme_stylebox_override("panel",_panel())
+	ui.add_child(destinations_panel)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation",18)
+	destinations_panel.add_child(column)
+	column.add_child(_label("CHOOSE YOUR EXPEDITION  /  3 MAPS",24,Color("e8dfbd")))
+	for i in WORLD.MAPS.SPECS.size():
+		var spec: Dictionary=WORLD.MAPS.SPECS[i]
+		var button := Button.new()
+		button.text="%s  ·  1.44 × 1.20 km\n%s"%[spec.name,spec.description]
+		button.custom_minimum_size.y=76
+		button.pressed.connect(func(): await switch_map(i))
+		column.add_child(button)
+	var close := Button.new()
+	close.text="Back to driving"
+	close.pressed.connect(func(): destinations_panel.hide(); _pause(false))
+	column.add_child(close)
+	destinations_panel.hide()
+
+func _show_destinations() -> void:
+	if changing_map:
+		return
+	_pause(true)
+	pause_panel.hide()
+	map_panel.hide()
+	garage_panel.hide()
+	destinations_panel.show()
+	destinations_panel.get_child(0).get_child(map_index+1).grab_focus()
+
+func switch_map(index: int) -> bool:
+	if changing_map or index<0 or index>=WORLD.MAPS.SPECS.size():
+		return false
+	if recorder.active or recorder.finishing:
+		_toast("Finish your recording with F9 before travelling to another map.")
+		return false
+	destinations_panel.hide()
+	if index==map_index:
+		_pause(false)
+		return true
+	changing_map=true
+	map_history[map_index]={"discovered":discovered.duplicate(),"waypoint":waypoint}
+	get_tree().paused=true
+	pause_panel.hide()
+	map_panel.hide()
+	garage_panel.hide()
+	loading_label.show()
+	# Draw the loading message before generating the new terrain on the main thread.
+	await get_tree().process_frame
+	await get_tree().process_frame
+	for player in [car.engine_audio,car.gravel_audio,car.water_audio,car.impact_audio]:
+		player.stop()
+	await get_tree().create_timer(0.15,true).timeout
+	car.free()
+	world.free()
+	map_index=index
+	world=WORLD.new()
+	world.map_index=index
+	world.process_mode=Node.PROCESS_MODE_PAUSABLE
+	add_child(world)
+	var spawn: Array=world.layout.spawn
+	spawn_point=Vector3(spawn[0],world.height_at(spawn[0],spawn[1])+1.7,spawn[1])
+	car=RigidBody3D.new()
+	car.set_script(CAR)
+	car.vehicle_index=vehicle_index
+	car.world=world
+	car.position=spawn_point
+	car.rotation.y=0.8
+	car.process_mode=Node.PROCESS_MODE_PAUSABLE
+	add_child(car)
+	camera.car=car
+	camera.world=world
+	camera.set_mode(camera.mode)
+	film_camera.car=car
+	film_camera.world=world
+	film_camera.snap=true
+	discovered.assign(map_history.get(index,{}).get("discovered",[]))
+	waypoint=map_history.get(index,{}).get("waypoint",Vector2.INF)
+	map_view.world=world
+	map_view.car=car
+	map_view.journal=discovered
+	map_title.text=world.map_spec.name+"   /   CLICK TO SET WAYPOINT   /   M TO CLOSE"
+	sky_material.sky_top_color=world.map_spec.sky
+	sky_material.sky_horizon_color=world.map_spec.horizon
+	sky_material.ground_horizon_color=world.map_spec.horizon
+	environment.fog_light_color=world.map_spec.fog
+	loading_label.hide()
+	changing_map=false
+	_pause(false)
+	_toast("Welcome to "+world.map_spec.name+". M opens your expedition map.")
+	return true
 
 func _pause(value: bool) -> void:
 	get_tree().paused=value
@@ -344,14 +470,20 @@ func _toggle_garage() -> void:
 func _build_garage() -> void:
 	garage_panel=PanelContainer.new()
 	garage_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	garage_panel.position=Vector2(-300,-220)
-	garage_panel.size=Vector2(600,440)
+	garage_panel.position=Vector2(-390,-270)
+	garage_panel.size=Vector2(780,540)
 	garage_panel.add_theme_stylebox_override("panel",_panel())
 	ui.add_child(garage_panel)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation",16)
 	garage_panel.add_child(column)
-	column.add_child(_label("EXPEDITION VEHICLES",24,Color("e8dfbd")))
+	column.add_child(_label("EXPEDITION VEHICLES  /  %d MODELS" % VEHICLES.SPECS.size(),24,Color("e8dfbd")))
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size=Vector2(740,400)
+	column.add_child(scroll)
+	var choices := VBoxContainer.new()
+	choices.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	scroll.add_child(choices)
 	for i in VEHICLES.SPECS.size():
 		var spec: Dictionary=VEHICLES.SPECS[i]
 		var button := Button.new()
@@ -359,7 +491,7 @@ func _build_garage() -> void:
 %s"%[spec.name,spec.mass,spec.description]
 		button.custom_minimum_size.y=64
 		button.pressed.connect(func(): switch_vehicle(i))
-		column.add_child(button)
+		choices.add_child(button)
 	var close := Button.new()
 	close.text="Back to driving  /  V"
 	close.pressed.connect(_toggle_garage)

@@ -15,18 +15,20 @@
 
 也可用 Godot 打开 `project.godot`，等待导入完成后按 F6/F5 运行。默认使用 Metal / Forward+；兼容性诊断可传 `--rendering-method gl_compatibility`，该模式没有相同的环境遮蔽效果。
 
-## 0.3.0 越野探索更新
+## 车队与多地图更新
 
-![新版本实机画面](docs/previews/expedition.jpg)
+[十车外观对照](docs/previews/fleet-all.jpg) · [十车驾驶舱](docs/previews/fleet-drivers.jpg) · [三张地图实景](docs/previews/maps-overview.jpg)
 
-- 第一人称驾驶舱、动态方向盘、右键拖动观察；C 循环俯视、驾驶舱、追车、侧面跟拍、航拍。
-- 地图扩至 900×780 米（原面积的 9 倍），保留原废土中心，增加森林营地、山顶中继站、沙漠补给站、草原农场、泥地试车区与沼泽栈道，共 11 个发现地点。
-- 连通越野小径、地形起伏、路标及地图目的地标记；草木分区绘制，树干和大石块带碰撞。
-- Scout 旅行越野车、Ridge 短轴越野车、Ranger 皮卡、Atlas 六轮卡车。车重、轴距、轮径、悬挂行程、转向与动力不同；L 切换低速挡。
-- 轮胎接触处分别计算柏油、泥土、草地、森林、岩石、沙地、泥地、沼泽及浅水的抓地力和阻力。
-- macOS 游戏内 MP4 录制，包含游戏音效。可单独跟拍，玩家用第一人称驾驶、录像用第三人称拍摄；也可录下当前驾驶画面。
+- **10 台可驾驶车辆**：保留 Scout、Ridge、Ranger、Atlas；新增牧马人、乌尼莫克 U5023、F-150、Hilux、东风 EQ246 和 Dodge WC-62 的外观参考车型。车身轮廓、灯组、格栅、驾驶室、货斗与载货结构分别设计，全部细化轮拱、轮胎、轮毂、车门和驾驶舱。
+- **3 张独立地图**，每张 1,440 × 1,200 米。原地图从 900 × 780 米扩大到约 2.46 倍面积，保留中心废土、修理站、废车场、双桥和原有六类区域。
+- **OLD FRONTIER**：森林、草原、山地、沙漠、泥地、沼泽，新增戈壁、城市废墟、山石攀爬路线及芦苇湖。
+- **SALT COAST**：大海、沙滩、港口废墟、沙丘、戈壁、河流、湿地与绿洲湖。
+- **ALPINE REACH**：雪山、松林、山口、攀岩区、高山草甸、冰湖和高山湖泊。
+- `Esc → Choose expedition map` 或 `M → Explore another map` 切换地图。保留当前车型、驾驶视角；各地图的发现记录和目的地在本次运行中分别保存。录像结束并保存后才能切换地图。
+- 地形按 64 米区块构建和剔除；岩石、树干、废墟和攀爬台阶都有碰撞。新增戈壁、积雪和冰面的抓地力、阻力与动力参数，雪地扬起浅色粉尘。
+- 第一人称驾驶、五种镜头、低速挡、独立跟拍录像和游戏声音继续可用。
 
-这里的驾驶仍是带辅助稳定的越野模型，尚未实现完整机械传动、轮胎变形、可变形泥地、损伤和绞盘；新地图是参考风格下的原创扩展。
+车型是参考实车外观的原创卡通模型，动力参数为游戏调校值，未声称机械复刻或官方授权。地图为原创扩展。驾驶仍采用带辅助稳定的射线悬挂，尚无轮胎变形、可变形泥地、损伤与绞盘。
 
 ## 操作
 
@@ -36,7 +38,7 @@
 | 手刹 | Space |
 | 回到修理站 | R |
 | 查看探索地图 | M |
-| 暂停、音量、退出 | Esc |
+| 暂停、地图选择、音量、退出 | Esc |
 | 缩放俯视镜头 | 鼠标滚轮 |
 | 切换驾驶视角 | C |
 | 观察左右、上下 | 按住鼠标右键拖动，松开回正 |
@@ -50,10 +52,10 @@
 
 ## 当前内容
 
-- 900 × 780 米的可驾驶地形：修理站、废车场、浅水河道、双桥、采石区与中继设施。
-- 25 个独立体素模型场景；六种破损废车、四类废料、车身、轮胎、设施和护栏都有可重建的源代码。
+- 三张各 1,440 × 1,200 米的独立地图，包含 30 个发现地点。
+- 31 个独立模型场景；六种破损废车、四类废料、车身、轮胎、设施和护栏都有可重建的源代码。
 - 成片荒草、下垂棕榈叶、层状岩壁、可驾驶垃圾山、磨损路面和曲折浅滩；暖光、偏紫阴影与更近的跟随视角。
-- 四轮射线悬挂、前进/倒车、抓地力和手刹、涉水阻力、尘土、水花、限量轮迹。
+- 四轮或六轮射线悬挂、前进/倒车、抓地力和手刹、涉水阻力、尘土、水花、限量轮迹。
 - 引擎、砂石胎噪、涉水、风声、碰撞、发现提示共 6 个原创声音文件。
 - 五种驾驶镜头、独立跟拍录像、地点发现、地图、暂停和总音量控制。探索记录当前只保留在本次运行中。
 
@@ -75,6 +77,7 @@ F9 开始，再按 F9 保存；F6 切换当前驾驶画面、追车、侧拍、�
 godot --headless --path . --editor --import --quit
 godot --headless --path . --script tests/smoke.gd
 godot --headless --path . --script tests/expedition.gd
+godot --headless --path . --script tests/maps.gd
 godot --path . --script tests/capture.gd -- /tmp/off-road-rider-service.png
 ```
 
@@ -125,7 +128,7 @@ python3 tests/check_recording.py "/path/from/RECORDING_FILE.mp4"
 
 `capture_features.gd` 生成各区域、驾驶舱、车型和菜单的实机图；`recording.gd` 在真实时间下驾驶到 80 km/h 以上，切换独立镜头并验证停止、再次录制和退出保存。最后一个媒体检查需要开发机上的 FFmpeg，仅用于验证文件。
 
-`vehicles.gd` 是车型与地表驾驶参数；`regions.gd` 是新区域、小径和植被的可编辑源；`driving_camera.gd` 管理驾驶与跟拍视角。`native/recorder.swift` 使用系统 AVFoundation 编码，`tools/build_recorder.sh` 编译 universal helper，导出插件将其自动装入 PCK。构建需先编译 helper，玩家不需要开发工具。
+`vehicles.gd` 是车型与地表驾驶参数；`maps.gd` 定义三张地图，`regions.gd` 是区域、小径和植被的可编辑源；`driving_camera.gd` 管理驾驶与跟拍视角。`native/recorder.swift` 使用系统 AVFoundation 编码，`tools/build_recorder.sh` 编译 universal helper，导出插件将其自动装入 PCK。构建需先编译 helper，玩家不需要开发工具。
 
 驾驶舱细化后的车型包含圆角内饰、座椅缝线、精细方向盘、实时速度表和罗盘。按 `C` 切换到第一人称，按住鼠标右键查看仪表及副驾。仅重建车辆、检查仪表与生成第一人称实机截图：
 
@@ -137,3 +140,12 @@ godot --path . --resolution 1600x900 --script tests/cockpit.gd -- --capture
 ```
 
 截图写入 `build/cockpit-*.png`；包含默认驾驶视角、隐藏 HUD 的同机位画面，以及驾驶位向右查看内饰的画面。
+
+车队和地图截图检查：
+
+```sh
+godot --path . --resolution 1600x900 --script tests/capture_fleet.gd
+godot --path . --resolution 1600x900 --script tests/capture_maps.gd
+```
+
+图片输出到 `build/fleet-*.png` 和 `build/map-*.png`。车辆与地图全景截图使用游戏内实际模型和光照，人工指定相机机位方便对照；驾驶舱截图使用正常第一人称视角。车辆参考来源见 [车队与地图设计说明](docs/FLEET_AND_MAPS.md)。

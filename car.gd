@@ -176,9 +176,12 @@ func _physics_process(delta: float) -> void:
 	var speed_ratio := clampf(absf(speed)/24,0,1)
 	engine_audio.pitch_scale=lerpf(engine_audio.pitch_scale,0.72+speed_ratio*1.25+absf(throttle)*0.16,delta*4)
 	engine_audio.volume_db=lerpf(-25,-15,maxf(speed_ratio,absf(throttle)*0.45))
-	gravel_audio.volume_db=lerpf(gravel_audio.volume_db,-25+speed_ratio*9 if grounded_wheels>0 and absf(speed)>1 and surface_kind in ["dirt","sand","grass","forest","rock"] else -65,delta*5)
+	gravel_audio.volume_db=lerpf(gravel_audio.volume_db,-25+speed_ratio*9 if grounded_wheels>0 and absf(speed)>1 and surface_kind in ["dirt","sand","grass","forest","rock","gobi","snow"] else -65,delta*5)
 	water_audio.volume_db=lerpf(water_audio.volume_db,-20+speed_ratio*6 if grounded_wheels>0 and absf(speed)>1 and surface_kind in ["water","mud","swamp"] else -65,delta*5)
-	dust.emitting=grounded_wheels>0 and absf(speed)>2 and surface_kind in ["dirt","sand","grass","forest","rock"]
+	dust.emitting=grounded_wheels>0 and absf(speed)>2 and surface_kind in ["dirt","sand","grass","forest","rock","gobi","snow"]
+	var dust_color := Color("e1e9e7") if surface_kind=="snow" else Color("b9a381")
+	dust.color_ramp.set_color(0,Color(dust_color,0.55))
+	dust.color_ramp.set_color(1,Color(dust_color,0))
 	spray.emitting=grounded_wheels>0 and absf(speed)>1 and surface_kind in ["water","mud","swamp"]
 	impact_cooldown=maxf(0,impact_cooldown-delta)
 	if (linear_velocity-previous_velocity).length()>3.5 and get_contact_count()>0 and impact_cooldown==0:

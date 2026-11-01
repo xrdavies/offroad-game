@@ -15,9 +15,9 @@ func _run() -> void:
 	current_scene=scene
 	await frames(120)
 	var world: Node3D=scene.world
-	check(world.SIZE==Vector2(450,390),"Expanded map bounds must match recovery and navigation")
+	check(world.SIZE==Vector2(720,600),"Expanded map bounds must match recovery and navigation")
 	for zone in world.REGIONS.ZONES:
-		var p: Vector2=zone.center
+		var p: Vector2=zone.center+Vector2(2,-2)
 		var at := Vector3(p.x,world.height_at(p.x,p.y)+1,p.y)
 		check(world.surface_at(at)==zone.surface,"Region must apply its surface physics: "+zone.id)
 		var query := PhysicsRayQueryParameters3D.create(at+Vector3.UP*10,at-Vector3.UP*3)

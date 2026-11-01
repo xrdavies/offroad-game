@@ -19,13 +19,13 @@ func _initialize() -> void:
 		_begin(spec.id.capitalize()+"Body")
 		_expedition_vehicle(spec)
 		_save(spec.id+"_body")
-	if "--vehicles-only" in OS.get_cmdline_user_args():
-		print("ASSETS_OK: four detailed vehicle cabins baked")
-		quit()
-		return
 	_begin("ScoutWheel")
 	_wheel(Vector3.ZERO, 0.48)
 	_save("scout_wheel")
+	if "--vehicles-only" in OS.get_cmdline_user_args():
+		print("ASSETS_OK: ", VEHICLES.SPECS.size(), " vehicle bodies and detailed wheels baked")
+		quit()
+		return
 	for i in 6:
 		_begin("Wreck%d" % i)
 		_wreck(i)
@@ -277,12 +277,18 @@ func _chips(pos: Vector3, size: Vector2, color: Color, seed_value: int, vertical
 		_box(pos+offset,patch,color.lightened(random.randf_range(-0.12,0.08)))
 
 func _wheel(pos: Vector3, radius: float) -> void:
-	_cylinder(pos, radius, 0.38, palette.rubber, 12, Vector3(0,0,PI/2))
-	_cylinder(pos, radius * 0.53, 0.405, palette.steel, 8, Vector3(0,0,PI/2))
-	_cylinder(pos, radius * 0.2, 0.43, palette.dark, 8, Vector3(0,0,PI/2))
-	for i in 12:
-		var a := TAU * i / 12.0
-		_box(pos + Vector3(0, sin(a), cos(a)) * radius, Vector3(0.41,0.11,0.15), palette.rubber.lightened(0.06), Vector3(-a,0,0))
+	_cylinder(pos, radius, 0.29, palette.rubber, 32, Vector3(0,0,PI/2))
+	_cylinder(pos, radius*0.95, 0.37, palette.rubber.lightened(0.025), 32, Vector3(0,0,PI/2))
+	_cylinder(pos, radius*0.55, 0.39, palette.steel, 32, Vector3(0,0,PI/2))
+	_cylinder(pos, radius*0.38, 0.40, palette.dark, 32, Vector3(0,0,PI/2))
+	_cylinder(pos, radius*0.18, 0.44, palette.steel, 24, Vector3(0,0,PI/2))
+	for side in [-1,1]:
+		for i in 8:
+			var a := TAU*i/8
+			_cylinder(pos+Vector3(side*0.208,sin(a)*radius*0.44,cos(a)*radius*0.44),radius*0.055,0.025,palette.cream,8,Vector3(0,0,PI/2))
+		for i in 24:
+			var a: float = TAU*(i+side*0.2)/24
+			_box(pos+Vector3(side*0.09,sin(a)*radius,cos(a)*radius),Vector3(0.20,0.055,0.09),palette.rubber.lightened(0.06),Vector3(-a,side*0.25,0))
 
 
 func _wreck(kind: int) -> void:
@@ -598,6 +604,57 @@ func _cockpit(spec: Dictionary, cabin_front: float) -> void:
 	_cylinder(seat+Vector3(0,-0.34,-0.81),0.025,0.30,charcoal,24,Vector3(PI/2,0,0))
 	_steering(seat)
 
+func _fender(x: float, z: float, radius: float, color: Color) -> void:
+	for i in 12:
+		var a := -PI/2+(i+0.5)*PI/12
+		_rounded_box(Vector3(x,-0.16+cos(a)*radius,z+sin(a)*radius),Vector3(0.25,0.09,radius*0.29),0.025,color,Vector3(a,0,0))
+
+func _round_lamp(pos: Vector3, radius: float) -> void:
+	_cylinder(pos,radius+0.03,0.055,palette.dark,32,Vector3(PI/2,0,0))
+	_cylinder(pos+Vector3(0,0,-0.032),radius,0.015,Color("eadab4"),32,Vector3(PI/2,0,0))
+	_box(pos+Vector3(0,0,-0.044),Vector3(radius*1.4,0.014,0.006),Color("fff0cd"))
+
+func _cargo_bed(spec: Dictionary, start: float) -> void:
+	var w: float=spec.width
+	var rear: float=spec.length/2
+	var length := rear-start
+	var paint := Color(spec.color)
+	var military: bool=spec.id in ["eq246","wc62"]
+	var base := 0.70 if not military else 0.91
+	_box(Vector3(0,base,(start+rear)/2),Vector3(w*0.91,0.1,length),palette.dark)
+	for side in [-1,1]:
+		_rounded_box(Vector3(side*w*0.47,base+0.25,(start+rear)/2),Vector3(0.12,0.5,length),0.045,paint)
+		for j in range(1,5):
+			var z := lerpf(start,rear,j/5.0)
+			_box(Vector3(side*w*0.499,base+0.25,z),Vector3(0.035,0.43,0.055),paint.lightened(0.12))
+		if military:
+			for row in 3:
+				_box(Vector3(side*w*0.465,base+0.4+row*0.17,(start+rear)/2),Vector3(0.07,0.11,length),paint.lightened(0.05*row))
+	_rounded_box(Vector3(0,base+0.25,rear),Vector3(w*0.98,0.5,0.12),0.035,paint)
+	_rounded_box(Vector3(0,base+0.4,rear+0.07),Vector3(0.24,0.045,0.025),0.01,palette.steel)
+	for x in [-w*0.36,w*0.36]:
+		_rounded_box(Vector3(x,base+0.24,rear+0.07),Vector3(0.12,0.31,0.035),0.015,palette.red)
+	for x in range(-3,4):
+		_box(Vector3(x*w*0.11,base+0.06,(start+rear)/2),Vector3(0.025,0.025,length-0.15),palette.steel)
+	if spec.id in ["eq246","hauler","wc62"]:
+		for j in 4:
+			var z := lerpf(start+0.15,rear-0.12,j/3.0)
+			for side in [-1,1]:
+				_beam(Vector3(side*w*0.45,base+0.3,z),Vector3(side*w*0.45,2.15,z),0.045,palette.dark)
+				_beam(Vector3(side*w*0.45,2.15,z),Vector3(side*w*0.32,2.45,z),0.045,palette.dark)
+			_beam(Vector3(-w*0.32,2.45,z),Vector3(w*0.32,2.45,z),0.045,palette.dark)
+		if spec.id=="eq246":
+			_box(Vector3(0,2.47,(start+rear)/2),Vector3(w*0.66,0.08,length),Color("8e9174"))
+			for side in [-1,1]:
+				_box(Vector3(side*w*0.4,2.30,(start+rear)/2),Vector3(w*0.24,0.06,length),Color("85896c"),Vector3(0,0,side*0.7))
+				_box(Vector3(side*w*0.455,1.92,(start+rear)/2),Vector3(0.04,0.52,length),Color("747b5f"))
+				for j in 12:
+					_box(Vector3(side*w*0.46,1.62,start+length*(j+0.5)/12),Vector3(0.025,0.18,0.018),palette.cream)
+	if spec.id in ["pickup","f150","hilux"]:
+		for side in [-1,1]:
+			_beam(Vector3(side*w*0.38,base+0.13,start+0.22),Vector3(side*w*0.38,1.7,start+0.22),0.07,palette.steel)
+		_beam(Vector3(-w*0.38,1.7,start+0.22),Vector3(w*0.38,1.7,start+0.22),0.07,palette.steel)
+
 func _expedition_vehicle(spec: Dictionary) -> void:
 	var w: float=spec.width
 	var l: float=spec.length
@@ -606,71 +663,142 @@ func _expedition_vehicle(spec: Dictionary) -> void:
 	var paint := Color(spec.color)
 	var front := -l/2
 	var cabin_front := seat.z-1.02
-	var cabin_back := seat.z+0.9
-	if spec.id=="scout":
-		cabin_back=l/2-0.3
+	var wagon: bool=spec.id in ["scout","wrangler"]
+	var open_cab: bool=spec.id in ["ridge","wc62"]
+	var cabin_back: float=l/2-0.3 if wagon else seat.z+(1.12 if spec.id in ["f150","hilux"] else 0.9)
 	var cabin_length := cabin_back-cabin_front
 	var sill := seat.y-0.35
-	_box(Vector3(0,0,0),Vector3(w*0.83,0.22,l),palette.dark)
-	_box(Vector3(0,0.35,0),Vector3(w,0.55,l),paint)
-	_box(Vector3(0,0.75,(front+cabin_front)/2),Vector3(w*0.96,0.22,cabin_front-front),paint.lightened(0.12))
-	_rounded_box(Vector3(0,roof,(cabin_front+cabin_back)/2),Vector3(w,0.11,cabin_length+0.14),0.04,paint)
-	_rounded_box(Vector3(0,roof-0.06,(cabin_front+cabin_back)/2),Vector3(w-0.14,0.04,cabin_length),0.015,Color("9a9c7b"))
-	for x in [-w/2,w/2]:
-		_box(Vector3(x,(sill+0.4)/2,(cabin_front+cabin_back)/2),Vector3(0.09,sill-0.4,cabin_length),paint)
-		for z in [cabin_front,cabin_back]:
-			_rounded_box(Vector3(x,(roof+sill)/2,z),Vector3(0.072,roof-sill,0.085),0.024,paint.lightened(0.12))
-			_rounded_box(Vector3(x*0.96,(roof+sill)/2,z+0.015),Vector3(0.022,roof-sill,0.025),0.009,Color("293d32"))
-		_beam(Vector3(x,seat.y-0.25,cabin_front+0.10),Vector3(x*1.19,seat.y-0.22,cabin_front+0.06),0.028,palette.steel)
-		_rounded_box(Vector3(x*1.19,seat.y-0.13,cabin_front+0.04),Vector3(0.19,0.23,0.08),0.035,Color("34473a"))
-		_rounded_box(Vector3(x*1.19,seat.y-0.13,cabin_front+0.086),Vector3(0.16,0.20,0.014),0.018,Color("90a8a1"))
-		_box(Vector3(x*1.07,-0.06,seat.z),Vector3(0.25,0.15,1.7),palette.steel)
-		_box(Vector3(x*1.012,0.88,seat.z+0.25),Vector3(0.06,0.07,0.25),palette.cream)
-		for z in spec.axles:
-			_box(Vector3(x,0.35,z),Vector3(0.3,0.18,spec.radius*2.5),palette.dark)
-	# Exterior glass is on layer 2; the cockpit camera sees through clean apertures.
-	_glass(Vector3(0,(roof+sill)/2,cabin_front),Vector3(w*0.92,roof-sill-0.12,0.025))
-	_glass(Vector3(0,(roof+sill)/2,cabin_back),Vector3(w*0.92,roof-sill-0.12,0.025))
+	var rake: float=0.26 if spec.id in ["f150","hilux","pickup"] else 0.10 if spec.id in ["scout","unimog"] else 0.03
+	var hood_y: float=seat.y-0.55 if spec.id in ["unimog","eq246"] else 0.86
+	var hood_width: float=w*(0.64 if spec.id=="wc62" else 0.84 if spec.id=="wrangler" else 0.96)
+	# Ladder chassis, axles, differential housings and separate curved wheel arches.
 	for side in [-1,1]:
-		_glass(Vector3(side*w/2,(roof+sill)/2,(cabin_front+cabin_back)/2),Vector3(0.025,roof-sill-0.12,cabin_length-0.12))
-		_box(Vector3(side*w/2,(roof+sill)/2,seat.z+0.43),Vector3(0.1,roof-sill,0.1),paint)
-		_box(Vector3(side*w*0.5,0.45,seat.z),Vector3(0.12,0.15,1.5),palette.sand)
-		for z in [seat.z-0.3,seat.z+0.45]:
-			_box(Vector3(side*w*0.504,0.72,z),Vector3(0.035,0.5,0.028),paint.darkened(0.18))
-	# Open window apertures and a complete interior keep the driver view unobstructed.
+		_box(Vector3(side*w*0.30,0.02,0),Vector3(0.11,0.20,l),palette.dark)
+	for z in spec.axles:
+		_cylinder(Vector3(0,-0.20,z),0.065,w*1.04,palette.steel,16,Vector3(0,0,PI/2))
+		_rounded_box(Vector3(0,-0.20,z),Vector3(0.3,0.24,0.25),0.075,palette.dark)
+		for side in [-1,1]:
+			_fender(side*w*0.52,z,spec.radius+0.17,palette.dark if spec.id in ["ridge","wrangler","f150"] else paint)
+	_rounded_box(Vector3(0,0.22,0),Vector3(w*0.77,0.26,l*0.97),0.10,paint)
+	_rounded_box(Vector3(0,hood_y-0.14,(front+cabin_front)/2),Vector3(hood_width,0.36,maxf(0.10,cabin_front-front)),0.09,paint)
+	for side in [-1,1]:
+		_box(Vector3(side*hood_width*0.34,hood_y+0.046,(front+cabin_front)/2),Vector3(0.035,0.018,maxf(0.08,cabin_front-front-0.2)),paint.lightened(0.18))
+		_rounded_box(Vector3(side*w/2,(sill+0.42)/2,(cabin_front+cabin_back)/2),Vector3(0.09,sill-0.42,cabin_length),0.035,paint)
+		for z in [cabin_front,cabin_back]:
+			_rounded_box(Vector3(side*w/2,(roof+sill)/2,z+(rake/2 if z==cabin_front else 0)),Vector3(0.075,roof-sill,0.085),0.025,paint.lightened(0.12),Vector3(atan2(rake,roof-sill) if z==cabin_front else 0,0,0))
+			_rounded_box(Vector3(side*w*0.48,(roof+sill)/2,z+0.015),Vector3(0.022,roof-sill,0.025),0.009,palette.dark)
+		_beam(Vector3(side*w/2,seat.y-0.25,cabin_front+0.10),Vector3(side*w*0.60,seat.y-0.18,cabin_front+0.05),0.028,palette.steel)
+		_rounded_box(Vector3(side*w*0.60,seat.y-0.10,cabin_front+0.04),Vector3(0.20,0.25,0.08),0.035,palette.dark)
+		_rounded_box(Vector3(side*w*0.60,seat.y-0.10,cabin_front+0.086),Vector3(0.17,0.22,0.014),0.02,Color("90a8a1"))
+		_rounded_box(Vector3(side*w*0.54,0.05,seat.z),Vector3(0.23,0.09,1.50),0.03,palette.steel)
+		for z in ([seat.z-0.20,seat.z+0.62] if spec.id in ["f150","hilux","wrangler"] else [seat.z+0.18]):
+			_box(Vector3(side*w*0.507,(sill+0.5)/2,z-0.36),Vector3(0.012,sill-0.5,0.016),paint.darkened(0.35))
+			_rounded_box(Vector3(side*w*0.52,sill-0.18,z),Vector3(0.045,0.035,0.17),0.01,palette.steel)
+			if spec.id=="wrangler":
+				for y in [0.55,0.9]:
+					_box(Vector3(side*w*0.523,y,z-0.34),Vector3(0.045,0.065,0.10),paint.lightened(0.1))
+		if not open_cab:
+			_window_quad([Vector3(side*w/2,sill+0.06,cabin_front+0.05),Vector3(side*w/2,roof-0.06,cabin_front+rake+0.05),Vector3(side*w/2,roof-0.06,cabin_back-0.05),Vector3(side*w/2,sill+0.06,cabin_back-0.05)])
+			_box(Vector3(side*w/2,(roof+sill)/2,seat.z+0.43),Vector3(0.07,roof-sill,0.07),paint)
+	if not open_cab:
+		_rounded_box(Vector3(0,roof,(cabin_front+rake+cabin_back)/2),Vector3(w,0.12,cabin_length-rake+0.14),0.05,palette.dark if spec.id=="wrangler" else paint)
+		_rounded_box(Vector3(0,roof-0.065,(cabin_front+cabin_back)/2),Vector3(w-0.14,0.035,cabin_length),0.014,Color("9a9c7b"))
+	else:
+		for z in [cabin_front,cabin_back]:
+			_beam(Vector3(-w/2,roof,z),Vector3(w/2,roof,z),0.06,palette.dark)
+		if spec.id=="ridge":
+			for side in [-1,1]:
+				_beam(Vector3(side*w/2,roof,cabin_front),Vector3(side*w/2,roof,cabin_back),0.07,palette.dark)
+			_box(Vector3(0,roof+0.01,seat.z+0.35),Vector3(w,0.035,0.85),Color("ac9476"))
+	_window_quad([Vector3(-w*0.46,sill+0.06,cabin_front),Vector3(w*0.46,sill+0.06,cabin_front),Vector3(w*0.46,roof-0.06,cabin_front+rake),Vector3(-w*0.46,roof-0.06,cabin_front+rake)])
+	if spec.id in ["wc62","eq246"]:
+		_box(Vector3(0,(roof+sill)/2,cabin_front-0.025),Vector3(0.035,roof-sill,0.04),paint)
+	if not open_cab:
+		_glass(Vector3(0,(roof+sill)/2,cabin_back),Vector3(w*0.92,roof-sill-0.12,0.025))
 	_box(Vector3(0,(sill+0.5)/2,cabin_back),Vector3(w,sill-0.5,0.12),paint)
 	_cockpit(spec,cabin_front)
-	for z in [front-0.08,l/2+0.08]:
-		_box(Vector3(0,0.1,z),Vector3(w+0.18,0.24,0.22),palette.steel)
-	_box(Vector3(0,0.44,front-0.02),Vector3(w*0.56,0.38,0.08),palette.dark)
-	for x in range(-3,4):
-		_box(Vector3(x*w*0.065,0.44,front-0.07),Vector3(0.06,0.32,0.04),palette.steel)
-	for x in [-w*0.37,w*0.37]:
-		_box(Vector3(x,0.56,front-0.05),Vector3(0.3,0.23,0.07),Color("f5ddb0"))
-		_box(Vector3(x,0.45,l/2+0.02),Vector3(0.22,0.22,0.05),palette.red)
-	if spec.id in ["pickup","hauler"]:
-		var bed_start := cabin_back+0.1
-		var bed_length := l/2-bed_start
-		_box(Vector3(0,0.69,bed_start+bed_length/2),Vector3(w*0.86,0.1,bed_length),palette.dark)
-		for x in [-w/2,w/2]:
-			_box(Vector3(x,0.95,bed_start+bed_length/2),Vector3(0.12,0.55,bed_length),paint)
-		_box(Vector3(0,0.95,l/2),Vector3(w,0.55,0.13),paint)
-		_box(Vector3(-0.4,0.96,bed_start+0.55),Vector3(0.65,0.4,0.65),palette.rust)
-		if spec.id=="hauler":
-			for z in [bed_start+0.2,l/2-0.2]:
-				for x in [-w*0.46,w*0.46]:
-					_box(Vector3(x,1.6,z),Vector3(0.09,1.7,0.09),palette.dark)
-				_box(Vector3(0,2.42,z),Vector3(w,0.09,0.09),palette.dark)
+	if spec.id in ["unimog","eq246"]:
+		_rounded_box(Vector3(0,(hood_y+0.3)/2,front+0.02),Vector3(w*0.96,hood_y-0.3,0.16),0.05,paint)
+	# Each front treatment has its own silhouette, lamps and grille geometry.
+	var nose_y := hood_y-0.18
+	_rounded_box(Vector3(0,nose_y,front-0.025),Vector3(hood_width,0.52,0.09),0.04,paint)
+	if spec.id in ["wrangler","wc62","unimog"]:
+		var grille_w := w*(0.42 if spec.id=="wc62" else 0.49)
+		_box(Vector3(0,nose_y,front-0.08),Vector3(grille_w,0.37,0.03),palette.dark)
+		for i in (7 if spec.id=="wrangler" else 9):
+			var x := (float(i)/float(6 if spec.id=="wrangler" else 8)-0.5)*grille_w*0.94
+			_rounded_box(Vector3(x,nose_y,front-0.103),Vector3(0.035,0.34,0.028),0.012,paint if spec.id=="wrangler" else palette.steel)
+		for side in [-1,1]:
+			_round_lamp(Vector3(side*w*0.36,nose_y,front-0.07),0.14 if spec.id!="unimog" else 0.17)
+	elif spec.id=="f150":
+		_rounded_box(Vector3(0,nose_y,front-0.08),Vector3(w*0.84,0.46,0.07),0.05,palette.dark)
+		for row in 4:
+			_box(Vector3(0,nose_y-0.14+row*0.09,front-0.12),Vector3(w*0.50,0.025,0.015),palette.steel)
+		for side in [-1,1]:
+			for y in [-0.17,0.17]:
+				_box(Vector3(side*w*0.34,nose_y+y,front-0.13),Vector3(0.28,0.04,0.025),Color("e9e1bd"))
+			_box(Vector3(side*w*0.41,nose_y,front-0.13),Vector3(0.04,0.36,0.025),Color("e9e1bd"))
+		for x in [-0.15,0.0,0.15]:
+			_box(Vector3(x,nose_y+0.25,front-0.11),Vector3(0.05,0.025,0.015),Color("cfa358"))
+	elif spec.id=="hilux":
+		for row in 5:
+			_rounded_box(Vector3(0,nose_y-0.16+row*0.07,front-0.09),Vector3(w*(0.38+row*0.045),0.055,0.035),0.015,palette.dark)
+		for side in [-1,1]:
+			_rounded_box(Vector3(side*w*0.36,nose_y+0.13,front-0.095),Vector3(w*0.22,0.11,0.035),0.025,Color("ede4c7"),Vector3(0,0,-side*0.10))
+			_round_lamp(Vector3(side*w*0.40,nose_y-0.23,front-0.09),0.06)
 	else:
-		_cylinder(Vector3(0,0.9,l/2+0.13),0.46,0.28,palette.rubber,12,Vector3(PI/2,0,0))
-		_cylinder(Vector3(0,0.9,l/2+0.29),0.22,0.04,palette.steel,8,Vector3(PI/2,0,0))
-		for x in [-w*0.42,w*0.42]:
-			_box(Vector3(x,roof+0.2,seat.z+0.25),Vector3(0.08,0.2,1.4),palette.dark)
-		for z in [seat.z-0.4,seat.z+0.3,seat.z+0.9]:
-			_box(Vector3(0,roof+0.13,z),Vector3(w*0.85,0.06,0.08),palette.dark)
-		_box(Vector3(0.25,roof+0.32,seat.z+0.5),Vector3(0.6,0.3,0.65),palette.sand)
-	_box(Vector3(w*0.48,roof-0.4,cabin_front-0.1),Vector3(0.1,1.5,0.1),palette.dark)
-	_chips(Vector3(0,0.865,(front+cabin_front)/2),Vector2(w*0.8,maxf(0.2,cabin_front-front-0.1)),paint.darkened(0.1),72)
+		_box(Vector3(0,nose_y,front-0.08),Vector3(w*0.58,0.32,0.03),palette.dark)
+		for row in 4:
+			_box(Vector3(0,nose_y-0.12+row*0.08,front-0.105),Vector3(w*0.54,0.025,0.025),palette.steel)
+		for side in [-1,1]:
+			if spec.id=="ridge":
+				_round_lamp(Vector3(side*w*0.37,nose_y,front-0.08),0.12)
+			else:
+				_rounded_box(Vector3(side*w*0.38,nose_y,front-0.08),Vector3(0.28,0.18,0.045),0.03,Color("eee0b8"))
+	for z in [front-0.12,l/2+0.09]:
+		_rounded_box(Vector3(0,0.19,z),Vector3(w+0.12,0.22,0.23),0.055,palette.dark)
+		for x in [-w*0.3,w*0.3]:
+			_rounded_box(Vector3(x,0.17,z+(-0.12 if z<0 else 0.12)),Vector3(0.10,0.10,0.06),0.035,palette.red)
+	_rounded_box(Vector3(0,0.36,front-0.17),Vector3(0.45,0.13,0.20),0.035,palette.steel)
+	if wagon or spec.id=="ridge":
+		_cylinder(Vector3(0,0.9,l/2+0.12),spec.radius,0.28,palette.rubber,32,Vector3(PI/2,0,0))
+		_cylinder(Vector3(0,0.9,l/2+0.27),spec.radius*0.5,0.04,palette.steel,24,Vector3(PI/2,0,0))
+		for side in [-1,1]:
+			_rounded_box(Vector3(side*w*0.38,0.75,l/2),Vector3(0.16,0.22,0.06),0.025,palette.red)
+		if spec.id=="scout":
+			for side in [-1,1]:
+				_box(Vector3(side*w*0.42,roof+0.14,seat.z+0.4),Vector3(0.06,0.18,1.7),palette.dark)
+			for z in [-0.4,0.3,1.0]:
+				_box(Vector3(0,roof+0.1,z),Vector3(w*0.85,0.05,0.06),palette.dark)
+			_rounded_box(Vector3(0.25,roof+0.3,0.55),Vector3(0.6,0.32,0.75),0.04,palette.sand)
+	elif spec.id=="unimog":
+		var length := l/2-cabin_back-0.17
+		var center := (cabin_back+0.17+l/2)/2
+		_rounded_box(Vector3(0,1.62,center),Vector3(w*0.92,2.0,length),0.12,Color("cec6aa"))
+		for side in [-1,1]:
+			_rounded_box(Vector3(side*w*0.468,1.95,center),Vector3(0.025,0.52,length*0.45),0.01,palette.dark)
+			_glass(Vector3(side*w*0.48,1.95,center),Vector3(0.02,0.44,length*0.40))
+			for y in [0.78,2.48]:
+				_box(Vector3(side*w*0.466,y,center),Vector3(0.025,0.05,length-0.16),palette.steel)
+		for y in [0.75,1.0,1.25,1.5,1.75,2.0]:
+			_box(Vector3(w*0.32,y,l/2+0.10),Vector3(0.40,0.035,0.035),palette.steel)
+		for x in [w*0.23,w*0.41]:
+			_box(Vector3(x,1.4,l/2+0.10),Vector3(0.035,1.55,0.035),palette.steel)
+	else:
+		_cargo_bed(spec,cabin_back+0.12)
+	if spec.id in ["scout","wrangler","unimog","eq246","hilux"]:
+		_rounded_box(Vector3(w*0.48,roof-0.47,cabin_front-0.10),Vector3(0.075,1.25,0.075),0.03,palette.dark)
+		_rounded_box(Vector3(w*0.48,roof+0.12,cabin_front-0.11),Vector3(0.14,0.09,0.16),0.03,palette.dark)
+	for side in [-1,1]:
+		for z in spec.axles:
+			_box(Vector3(side*w*0.51,-0.12,z+spec.radius+0.17),Vector3(0.34,0.34,0.045),palette.rubber)
+	if spec.id=="eq246":
+		for side in [-1,1]:
+			for y in [0.13,0.43,0.73]:
+				_box(Vector3(side*w*0.54,y,seat.z),Vector3(0.22,0.06,0.55),palette.steel)
+	if spec.id=="ridge":
+		for x in [-0.45,-0.15,0.15,0.45]:
+			_round_lamp(Vector3(x,roof+0.13,cabin_front),0.07)
 
 func _glass(pos: Vector3, size: Vector3) -> void:
 	var visual := MeshInstance3D.new()
@@ -684,5 +812,23 @@ func _glass(pos: Vector3, size: Vector3) -> void:
 	material.roughness=0.32
 	material.metallic=0.25
 	visual.material_override=material
+	root_asset.add_child(visual)
+	visual.owner=root_asset
+
+func _window_quad(points: Array[Vector3]) -> void:
+	var visual := MeshInstance3D.new()
+	var glass_surface := SurfaceTool.new()
+	glass_surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in [0,1,2,0,2,3]:
+		glass_surface.add_vertex(points[i])
+	glass_surface.generate_normals()
+	visual.mesh=glass_surface.commit()
+	visual.layers=2
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color=Color("738997")
+	mat.roughness=0.32
+	mat.metallic=0.25
+	mat.cull_mode=BaseMaterial3D.CULL_DISABLED
+	visual.material_override=mat
 	root_asset.add_child(visual)
 	visual.owner=root_asset

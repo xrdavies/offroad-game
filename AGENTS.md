@@ -16,3 +16,7 @@
 - Avoid adding dependencies unless the current project cannot meet the requirement without one.
 - Commit `.uid` and `.import` files with the resources they describe; ignore only `.godot/` and local build output.
 - Keep editable generation sources and asset provenance alongside art and audio. Do not describe a development build as release-ready without the acceptance evidence in `docs/ACCEPTANCE.md`.
+
+## Delivery preference
+
+- Build or package installers only when the user explicitly requests packaging.

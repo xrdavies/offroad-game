@@ -16,6 +16,28 @@ func _draw() -> void:
 		draw_line(Vector2(0,z/260.0*size.y),Vector2(size.x,z/260.0*size.y),Color(0.7,0.7,0.5,0.08))
 	for zone in world.REGIONS.ZONES:
 		draw_circle(_point(zone.center),zone.radius/(world.SIZE.x*2)*size.x,Color(zone.color,0.3))
+	var water := PackedVector2Array()
+	for z in range(-int(world.SIZE.y),int(world.SIZE.y)+1,5):
+		water.append(_point(Vector2(world.river_x(z)-6.5-world.river_widening(z),z)))
+	for z in range(int(world.SIZE.y),-int(world.SIZE.y)-1,-5):
+		water.append(_point(Vector2(world.river_x(z)+6.5+world.river_widening(z),z)))
+	draw_colored_polygon(water,Color("658681"))
+	if world.map_index==1:
+		var sea := PackedVector2Array([Vector2.ZERO,Vector2(0,size.y)])
+		for z in range(int(world.SIZE.y),-int(world.SIZE.y)-1,-10):
+			sea.append(_point(Vector2(world.coast_x(z),z)))
+		draw_colored_polygon(sea,Color("567c87"))
+	for lake in world.REGIONS.lakes:
+		var outline := PackedVector2Array()
+		for i in 64:
+			var point: Vector2=lake.center+Vector2(cos(i*TAU/64),sin(i*TAU/64))*lake.radius*0.9
+			outline.append(_point(point))
+		draw_colored_polygon(outline,Color("acced6") if lake.frozen else Color("658681"))
+	var road := PackedVector2Array()
+	for p in world.road_points:
+		road.append(_point(Vector2(p.x,p.z)))
+	draw_polyline(road,Color("b6b093"),3,true)
+	for zone in world.REGIONS.ZONES:
 		draw_string(ThemeDB.fallback_font,_point(zone.center)+Vector2(-35,20),zone.id.to_upper(),HORIZONTAL_ALIGNMENT_LEFT,-1,10,Color("d3d2b8"))
 	for trail in world.REGIONS.TRAILS:
 		for i in range(trail.size()-1):
@@ -23,16 +45,6 @@ func _draw() -> void:
 	if waypoint!=Vector2.INF:
 		draw_circle(_point(waypoint),8,Color("e8ac66"),false,2)
 		draw_line(_point(waypoint)-Vector2(11,0),_point(waypoint)+Vector2(11,0),Color("e8ac66"),1)
-	var water := PackedVector2Array()
-	for z in range(-390,391,5):
-		water.append(_point(Vector2(world.river_x(z)-6.5-world.river_widening(z),z)))
-	for z in range(390,-391,-5):
-		water.append(_point(Vector2(world.river_x(z)+6.5+world.river_widening(z),z)))
-	draw_colored_polygon(water,Color("658681"))
-	var road := PackedVector2Array()
-	for p in world.road_points:
-		road.append(_point(Vector2(p.x,p.z)))
-	draw_polyline(road,Color("b6b093"),3,true)
 	for place in world.landmarks:
 		var p := _point(Vector2(place.position[0],place.position[1]))
 		var found := journal.has(place.id)

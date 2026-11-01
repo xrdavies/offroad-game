@@ -88,10 +88,18 @@ func _run() -> void:
 		_check(car.position.y>1,"Bridge crossing must not drop the car into the river bed")
 	for place in scene.world.landmarks:
 		var p:=Vector2(place.position[0],place.position[1])
-		_check(absf(p.x)<150 and absf(p.y)<130,"Landmark must be within map boundaries")
+		_check(absf(p.x)<scene.world.SIZE.x and absf(p.y)<scene.world.SIZE.y,"Landmark must be within map boundaries")
 	print("SMOKE: ","PASS" if failures.is_empty() else failures)
+	# Audio runs on wall time even when the test uses --fixed-fps.
+	scene.set_process(false)
+	paused=true
+	for player in scene.find_children("*","AudioStreamPlayer",true,false):
+		player.stop()
+		player.stream=null
+	OS.delay_msec(200)
 	scene.queue_free()
 	await create_timer(0.15).timeout
+	OS.delay_msec(100)
 	quit(0 if failures.is_empty() else 1)
 
 func _check_spatial_batches() -> void:

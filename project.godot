@@ -24,6 +24,8 @@ window/stretch/mode="canvas_items"
 
 [physics]
 
+common/physics_interpolation=true
+
 3d/default_gravity=18.0
 
 [rendering]
@@ -33,3 +35,7 @@ renderer/rendering_method.mobile="mobile"
 anti_aliasing/quality/msaa_3d=1
 environment/defaults/default_clear_color=Color(0.11, 0.13, 0.15, 1)
 textures/vram_compression/import_etc2_astc=true
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/recording_export/plugin.cfg")

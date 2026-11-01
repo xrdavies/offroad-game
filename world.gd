@@ -2,7 +2,8 @@ extends Node3D
 
 const ROUTE_PATH := "res://assets/world/route.json"
 const WATER_LEVEL := 0.72
-const SIZE := Vector2(150,130)
+const REGIONS := preload("res://regions.gd")
+const SIZE := REGIONS.SIZE
 const SCRAP_CENTERS := [Vector2(-88,-24),Vector2(-61,29),Vector2(77,-73)]
 var layout: Dictionary
 var landmarks: Array = []
@@ -24,6 +25,7 @@ func _ready() -> void:
 	_build_scrap()
 	_build_vegetation()
 	_build_cliffs()
+	REGIONS.build(self)
 	_build_boundary()
 
 func river_x(z: float) -> float:
@@ -37,6 +39,7 @@ func height_at(x: float, z: float) -> float:
 	base += 5.0 * exp(-pow((x-96.0)/33.0,2)-pow((z-8.0)/40.0,2))
 	base += 3.5 * exp(-pow((x+15.0)/40.0,2)-pow((z+98.0)/27.0,2))
 	base += scrap_height_at(x,z)
+	base=REGIONS.height(x,z,base)
 	var widening := river_widening(z)
 	var bank := smoothstep(3.5+widening,12.0+widening,abs(x-river_x(z)))
 	base = lerpf(0.12,base,bank)
@@ -60,10 +63,10 @@ func road_distance(point: Vector2) -> float:
 
 func surface_at(point: Vector3) -> String:
 	if height_at(point.x,point.z) < WATER_LEVEL and point.y < WATER_LEVEL+1.0:
-		return "water"
+		return "swamp" if REGIONS.zone_at(Vector2(point.x,point.z)).get("id","")=="swamp" else "water"
 	if road_distance(Vector2(point.x,point.z)) < 3.5:
 		return "road"
-	return "dirt"
+	return REGIONS.zone_at(Vector2(point.x,point.z)).get("surface","dirt")
 
 func _build_road_curve() -> void:
 	var curve := Curve3D.new()
@@ -83,8 +86,8 @@ func _build_road_curve() -> void:
 func _build_terrain() -> void:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	for z in range(-130,130,2):
-		for x in range(-150,150,2):
+	for z in range(-390,390,2):
+		for x in range(-450,450,2):
 			var a := Vector3(x,height_at(x,z),z)
 			var b := Vector3(x+2,height_at(x+2,z),z)
 			var c := Vector3(x+2,height_at(x+2,z+2),z+2)
@@ -100,6 +103,8 @@ func _build_terrain() -> void:
 			color=color.lerp(Color("7e887c"),shore*0.8)
 			if x>77:
 				color = color.lerp(Color("9f7662"),0.5)
+			for zone in REGIONS.ZONES:
+				color=color.lerp(zone.color,REGIONS.weight(Vector2(x,z),zone))
 			_tri(st,a,b,c,color)
 			_tri(st,a,c,d,color)
 	terrain_mesh = st.commit()
@@ -170,36 +175,32 @@ func _build_bridge(center: Vector3, angle: float) -> void:
 func _build_river() -> void:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	for z in range(-130,130,2):
-		for x in range(-14,14):
-			var a := Vector3(river_x(z)+x,WATER_LEVEL,z)
-			var b := Vector3(river_x(z)+x+1,WATER_LEVEL,z)
-			var c := Vector3(river_x(z+2)+x+1,WATER_LEVEL,z+2)
-			var d := Vector3(river_x(z+2)+x,WATER_LEVEL,z+2)
+	# Shared height samples clip both the river and marsh water to their actual beds.
+	for z in range(-390,390,4):
+		for x in range(-450,450,4):
+			var points: Array[Vector3]=[Vector3(x,WATER_LEVEL,z),Vector3(x+4,WATER_LEVEL,z),Vector3(x+4,WATER_LEVEL,z+4),Vector3(x,WATER_LEVEL,z+4)]
 			var depths: Array[Vector2]=[]
-			for p in [a,b,c,d]:
-				depths.append(Vector2(WATER_LEVEL-height_at(p.x,p.z),0))
-			_tri(st,a,b,c,Color.WHITE,[depths[0],depths[1],depths[2]])
-			_tri(st,a,c,d,Color.WHITE,[depths[0],depths[2],depths[3]])
+			var wet := false
+			for p in points:
+				var depth: float=WATER_LEVEL-height_at(p.x,p.z)
+				depths.append(Vector2(depth,0))
+				wet=wet or depth>0
+			if not wet:
+				continue
+			_tri(st,points[0],points[1],points[2],Color.WHITE,[depths[0],depths[1],depths[2]])
+			_tri(st,points[0],points[2],points[3],Color.WHITE,[depths[0],depths[2],depths[3]])
 	var water := MeshInstance3D.new()
 	water.mesh=st.commit()
 	var material := ShaderMaterial.new()
 	material.shader=load("res://assets/water.gdshader")
 	water.material_override=material
 	add_child(water)
-	var foam: Array[Transform3D]=[]
-	for i in 550:
-		var z := rng.randf_range(-128,128)
-		var x := river_x(z)+rng.randf_range(-11,11)
-		if height_at(x,z)>WATER_LEVEL-0.1:
-			continue
-		foam.append(Transform3D(Basis.IDENTITY.scaled(Vector3(rng.randf_range(0.2,1.3),0.015,0.07)),Vector3(x,WATER_LEVEL+0.025,z)))
-	_multimesh(foam,BoxMesh.new(),Color("9db7a8"))
 
 func _build_places() -> void:
 	for data in landmarks:
 		var pos := Vector3(data.position[0],0,data.position[1])
-		_asset(data.model,pos,data.rotation)
+		if not data.model.is_empty():
+			_asset(data.model,pos,data.rotation)
 	for x in [-20.0,-16.0]:
 		_asset("fuel_pump",Vector3(x,0,14))
 	for pos in [Vector3(-24,0,0),Vector3(-23,0,-2),Vector3(-21,0,-1),Vector3(-8,0,-2)]:
@@ -362,13 +363,13 @@ func _build_cliffs() -> void:
 
 func _build_boundary() -> void:
 	# Visible stepped escarpments explain the edge of the drivable survey area.
-	for x in [-148,148]:
-		for z in range(-130,131,13):
+	for x in [-448,448]:
+		for z in range(-390,391,13):
 			var y := height_at(x,z)
 			_box(Vector3(x,y+2.5,z),Vector3(7,5,13.2),Color("797c69"),true)
 			_box(Vector3(x,y+6,z),Vector3(5,2+rng.randf(),12.8),Color("93917b"),true)
-	for z in [-128,128]:
-		for x in range(-145,146,13):
+	for z in [-388,388]:
+		for x in range(-445,446,13):
 			var y := height_at(x,z)
 			_box(Vector3(x,y+2.5,z),Vector3(13.2,5,7),Color("797c69"),true)
 			_box(Vector3(x,y+6,z),Vector3(12.8,2+rng.randf(),5),Color("93917b"),true)
@@ -392,6 +393,8 @@ func _box(pos: Vector3, size: Vector3, color: Color, solid := false, parent: Nod
 	visual.mesh=mesh
 	visual.material_override=_material(color)
 	node.add_child(visual)
+	if absf(pos.x)>420 or absf(pos.z)>360:
+		visual.visibility_range_end=180
 	if solid:
 		var body := StaticBody3D.new()
 		var shape := CollisionShape3D.new()
@@ -442,6 +445,8 @@ func _multimesh(transforms: Array[Transform3D], mesh: Mesh, color: Color, varied
 			multi.set_instance_color(j,(tint.lightened(rng.randf_range(-0.12,0.1)) if varied else tint).srgb_to_linear())
 		batch.multimesh=multi
 		batch.material_override=material
+		batch.visibility_range_end=150 if mesh==grass_mesh else 260
+		batch.visibility_range_end_margin=20
 		batch.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(batch)
 

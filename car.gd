@@ -1,15 +1,19 @@
 extends RigidBody3D
 
-const BODY := preload("res://assets/models/scout_body.tscn")
+const VEHICLES := preload("res://vehicles.gd")
 const WHEEL := preload("res://assets/models/scout_wheel.tscn")
 const ENGINE := preload("res://assets/audio/engine.wav")
 const GRAVEL := preload("res://assets/audio/gravel.wav")
 const WATER := preload("res://assets/audio/water.wav")
 const IMPACT := preload("res://assets/audio/impact.wav")
-const WHEEL_POINTS := [Vector3(-0.99,0.32,-1.25),Vector3(0.99,0.32,-1.25),Vector3(-0.99,0.32,1.28),Vector3(0.99,0.32,1.28)]
-const RADIUS := 0.48
-const REST := 0.65
 
+var vehicle_index := 0
+var spec: Dictionary
+var wheel_points: Array[Vector3]
+var radius := 0.48
+var rest := 0.65
+var low_range := false
+var steering_wheel: Node3D
 var world: Node3D
 var start_position := Vector3.ZERO
 var start_yaw := 0.0
@@ -34,7 +38,11 @@ var reset_position := Vector3.ZERO
 var reset_yaw := 0.0
 
 func _ready() -> void:
-	mass=850.0
+	spec=VEHICLES.SPECS[vehicle_index]
+	wheel_points=VEHICLES.wheel_points(spec)
+	radius=spec.radius
+	rest=spec.travel
+	mass=spec.mass
 	linear_damp=0.12
 	angular_damp=2.8
 	continuous_cd=true
@@ -50,29 +58,32 @@ func _ready() -> void:
 	start_yaw=rotation.y
 	var collision := CollisionShape3D.new()
 	var box := BoxShape3D.new()
-	box.size=Vector3(1.65,0.7,3.6)
+	box.size=Vector3(spec.width*0.87,0.7,spec.length)
 	collision.shape=box
 	collision.position.y=0.25
 	add_child(collision)
 	var cabin_collision := CollisionShape3D.new()
 	var cabin_box := BoxShape3D.new()
-	cabin_box.size=Vector3(1.65,1.3,1.95)
+	cabin_box.size=Vector3(spec.width*0.87,spec.roof-0.6,1.6)
 	cabin_collision.shape=cabin_box
-	cabin_collision.position=Vector3(0,0.94,0.3)
+	cabin_collision.position=Vector3(0,(spec.roof+0.6)/2,spec.seat.z)
 	add_child(cabin_collision)
-	add_child(BODY.instantiate())
-	for point in WHEEL_POINTS:
+	add_child(load("res://assets/models/"+spec.id+"_body.tscn").instantiate())
+	_build_steering_wheel()
+	for point in wheel_points:
 		var ray := RayCast3D.new()
 		ray.position=point
-		ray.target_position=Vector3(0,-REST-RADIUS-0.2,0)
+		ray.target_position=Vector3(0,-rest-radius-0.2,0)
 		ray.exclude_parent=true
 		ray.enabled=true
 		add_child(ray)
 		rays.append(ray)
 		var pivot := Node3D.new()
-		pivot.position=point-Vector3.UP*REST
+		pivot.position=point-Vector3.UP*rest
 		add_child(pivot)
-		pivot.add_child(WHEEL.instantiate())
+		var wheel: Node3D=WHEEL.instantiate()
+		wheel.scale=Vector3.ONE*radius/0.48
+		pivot.add_child(wheel)
 		wheels.append(pivot)
 	engine_audio=_loop(ENGINE,-23)
 	gravel_audio=_loop(GRAVEL,-60)
@@ -91,6 +102,7 @@ func _ready() -> void:
 	mat.cull_mode=BaseMaterial3D.CULL_DISABLED
 	visual.material_override=mat
 	visual.top_level=true
+	visual.physics_interpolation_mode=Node.PHYSICS_INTERPOLATION_MODE_OFF
 	add_child(visual)
 	visual.global_transform=Transform3D.IDENTITY
 
@@ -100,6 +112,7 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 		state.linear_velocity=Vector3.ZERO
 		state.angular_velocity=Vector3.ZERO
 		pending_reset=false
+		reset_physics_interpolation()
 
 func _exit_tree() -> void:
 	for child in get_children():
@@ -115,55 +128,56 @@ func _physics_process(delta: float) -> void:
 	var right := global_basis.x
 	var speed := linear_velocity.dot(forward)
 	grounded_wheels=0
+	var handling := Vector3.ZERO
 	for i in rays.size():
 		var ray := rays[i]
 		ray.force_raycast_update()
-		var travel := REST
+		var travel := rest
 		if ray.is_colliding():
-			travel=ray.global_position.distance_to(ray.get_collision_point())-RADIUS
-			if travel < REST:
+			travel=ray.global_position.distance_to(ray.get_collision_point())-radius
+			if travel < rest:
 				grounded_wheels+=1
+				var surface: String=world.surface_at(ray.get_collision_point()+Vector3.UP*0.05) if is_instance_valid(world) else "dirt"
+				handling+=VEHICLES.SURFACES.get(surface,VEHICLES.SURFACES.dirt)
 				var normal := ray.get_collision_normal()
 				var offset := ray.global_position-global_position
 				var point_velocity := linear_velocity+angular_velocity.cross(offset)
-				var spring := (REST-travel)*28000.0-point_velocity.dot(normal)*3200.0
-				apply_force(normal*clampf(spring,0,22000),offset)
-		wheels[i].position=WHEEL_POINTS[i]-Vector3.UP*clampf(travel,0.05,REST)
+				var load_scale := mass/850.0*4.0/rays.size()
+				var spring := ((rest-travel)*28000.0-point_velocity.dot(normal)*3200.0)*load_scale
+				apply_force(normal*clampf(spring,0,22000*load_scale),offset)
+		wheels[i].position=wheel_points[i]-Vector3.UP*clampf(travel,0.05,rest)
 		wheels[i].rotation.y=lerp_angle(wheels[i].rotation.y,-steering*0.48 if i<2 else 0.0,delta*9)
 		wheels[i].get_child(0).rotation.x=-wheel_spin
 	surface_kind=world.surface_at(global_position) if is_instance_valid(world) else "dirt"
-	var contact := grounded_wheels/4.0
+	var contact := float(grounded_wheels)/rays.size()
 	if grounded_wheels>0:
-		var drive := 9800.0 if surface_kind!="water" else 5600.0
-		var max_speed := 24.0 if throttle>=0 else 9.0
-		if absf(speed)<max_speed or signf(speed)!=signf(throttle):
-			apply_central_force(forward*throttle*drive*contact)
-		var grip := 5.2 if surface_kind=="road" else 3.5
-		if braking:
-			grip*=0.3
+		handling/=grounded_wheels
+		var drive: float=spec.drive*handling.z*(1.65 if low_range else 1.0)
+		var max_speed: float=(spec.speed*(0.32 if low_range else 1.0)) if throttle>=0 else 7.0
+		var available := clampf((max_speed-absf(speed))*0.7,0,1) if signf(speed)==signf(throttle) else 1.0
+		apply_central_force(forward*throttle*drive*available*contact)
+		var grip := handling.x*(0.3 if braking else 1.0)
 		apply_central_force(-right*linear_velocity.dot(right)*mass*grip*contact)
-		apply_central_force(-forward*speed*mass*(2.8 if braking else 0.11)*contact)
-		if surface_kind=="water":
-			apply_central_force(-linear_velocity*mass*0.65)
-		var desired_yaw := -steering*1.25*clampf(speed/7.0,-1,1)
+		apply_central_force(-forward*speed*mass*(3.5 if braking else handling.y)*contact)
+		var desired_yaw: float=-steering*spec.steer*clampf(speed/7.0,-1,1)/(1.0+maxf(0,absf(speed)-13)*0.035)
 		apply_torque(Vector3.UP*(desired_yaw-angular_velocity.y)*mass*2.4*contact)
-		# Gentle roll recovery keeps the arcade car controllable without steering in mid-air.
 		apply_torque(global_basis.y.cross(Vector3.UP)*mass*3.0)
-	wheel_spin+=speed*delta/RADIUS
+	steering_wheel.rotation.z=lerp_angle(steering_wheel.rotation.z,-steering*1.5,delta*9)
+	wheel_spin+=speed*delta/radius
 	var speed_ratio := clampf(absf(speed)/24,0,1)
 	engine_audio.pitch_scale=lerpf(engine_audio.pitch_scale,0.72+speed_ratio*1.25+absf(throttle)*0.16,delta*4)
 	engine_audio.volume_db=lerpf(-25,-15,maxf(speed_ratio,absf(throttle)*0.45))
-	gravel_audio.volume_db=lerpf(gravel_audio.volume_db,-25+speed_ratio*9 if grounded_wheels>0 and absf(speed)>1 and surface_kind=="dirt" else -65,delta*5)
-	water_audio.volume_db=lerpf(water_audio.volume_db,-20+speed_ratio*6 if grounded_wheels>0 and absf(speed)>1 and surface_kind=="water" else -65,delta*5)
-	dust.emitting=grounded_wheels>0 and absf(speed)>2 and surface_kind=="dirt"
-	spray.emitting=grounded_wheels>0 and absf(speed)>1 and surface_kind=="water"
+	gravel_audio.volume_db=lerpf(gravel_audio.volume_db,-25+speed_ratio*9 if grounded_wheels>0 and absf(speed)>1 and surface_kind in ["dirt","sand","grass","forest","rock"] else -65,delta*5)
+	water_audio.volume_db=lerpf(water_audio.volume_db,-20+speed_ratio*6 if grounded_wheels>0 and absf(speed)>1 and surface_kind in ["water","mud","swamp"] else -65,delta*5)
+	dust.emitting=grounded_wheels>0 and absf(speed)>2 and surface_kind in ["dirt","sand","grass","forest","rock"]
+	spray.emitting=grounded_wheels>0 and absf(speed)>1 and surface_kind in ["water","mud","swamp"]
 	impact_cooldown=maxf(0,impact_cooldown-delta)
 	if (linear_velocity-previous_velocity).length()>3.5 and get_contact_count()>0 and impact_cooldown==0:
 		impact_audio.volume_db=-14
 		impact_audio.play()
 		impact_cooldown=0.35
 	previous_velocity=linear_velocity
-	if grounded_wheels>1 and surface_kind=="dirt" and global_position.distance_to(last_mark)>0.65:
+	if grounded_wheels>1 and surface_kind!="road" and global_position.distance_to(last_mark)>0.65:
 		_add_tracks()
 
 func reset_to_start(at: Vector3 = start_position) -> void:
@@ -227,7 +241,7 @@ func _particles(color: Color,lifetime: float,amount: int) -> CPUParticles3D:
 
 func _add_tracks() -> void:
 	last_mark=global_position
-	for index in [2,3]:
+	for index in range(rays.size()-2,rays.size()):
 		if not rays[index].is_colliding():
 			continue
 		var p := rays[index].get_collision_point()+Vector3.UP*0.025
@@ -242,3 +256,29 @@ func _add_tracks() -> void:
 		for i in [0,1,2,0,2,3]:
 			trail.surface_add_vertex(mark[i])
 	trail.surface_end()
+
+func _build_steering_wheel() -> void:
+	steering_wheel=Node3D.new()
+	steering_wheel.position=spec.seat+Vector3(0,-0.37,-0.56)
+	add_child(steering_wheel)
+	var rim := MeshInstance3D.new()
+	var torus := TorusMesh.new()
+	torus.inner_radius=0.19
+	torus.outer_radius=0.235
+	torus.rings=16
+	torus.ring_segments=6
+	rim.mesh=torus
+	rim.rotation.x=PI/2
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color=Color("333b39")
+	rim.material_override=mat
+	steering_wheel.add_child(rim)
+	for angle in [0.0,PI*2/3,PI*4/3]:
+		var spoke := MeshInstance3D.new()
+		var box := BoxMesh.new()
+		box.size=Vector3(0.04,0.22,0.035)
+		spoke.mesh=box
+		spoke.position=Vector3(sin(angle)*0.1,cos(angle)*0.1,0)
+		spoke.rotation.z=-angle
+		spoke.material_override=mat
+		steering_wheel.add_child(spoke)

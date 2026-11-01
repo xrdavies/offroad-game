@@ -1,6 +1,7 @@
 extends SceneTree
 
 # Editable source for all original voxel models; bake with Godot --headless --script.
+const VEHICLES := preload("res://vehicles.gd")
 const OUT := "res://assets/models/"
 var surface: SurfaceTool
 var root_asset: Node3D
@@ -14,9 +15,10 @@ var palette := {
 
 func _initialize() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT))
-	_begin("ScoutBody")
-	_vehicle()
-	_save("scout_body")
+	for spec in VEHICLES.SPECS:
+		_begin(spec.id.capitalize()+"Body")
+		_expedition_vehicle(spec)
+		_save(spec.id+"_body")
 	_begin("ScoutWheel")
 	_wheel(Vector3.ZERO, 0.48)
 	_save("scout_wheel")
@@ -64,7 +66,7 @@ func _initialize() -> void:
 	_begin("Relay")
 	_relay()
 	_save("relay")
-	print("ASSETS_OK: 22 original reusable model scenes baked")
+	print("ASSETS_OK: original vehicle and scenery scenes baked")
 	quit()
 
 func _begin(asset_name: String) -> void:
@@ -169,55 +171,6 @@ func _wheel(pos: Vector3, radius: float) -> void:
 		var a := TAU * i / 12.0
 		_box(pos + Vector3(0, sin(a), cos(a)) * radius, Vector3(0.41,0.11,0.15), palette.rubber.lightened(0.06), Vector3(-a,0,0))
 
-func _vehicle() -> void:
-	_box(Vector3(0, 0, 0), Vector3(1.65,0.22,3.7), palette.dark)
-	_box(Vector3(0,0.35,0), Vector3(1.86,0.62,3.7), palette.paint)
-	_box(Vector3(0,0.7,-1.25), Vector3(1.8,0.16,1.15), palette.edge)
-	_box(Vector3(0,0.86,0.22), Vector3(1.7,0.7,1.82), palette.glass)
-	_box(Vector3(0,1.24,0.25), Vector3(1.86,0.16,2.05), palette.paint)
-	_box(Vector3(0,0.86,1.3), Vector3(1.86,0.72,0.7), palette.paint)
-	for x in [-0.88,0.88]:
-		for z in [-0.65,0.35,1.09]:
-			_box(Vector3(x,0.88,z), Vector3(0.1,0.72,0.1), palette.edge)
-		_box(Vector3(x,0.37,0.05), Vector3(0.065,0.42,1.7), palette.edge)
-		_box(Vector3(x*1.07,0.58,0.3), Vector3(0.075,0.055,0.22), palette.dark)
-		_box(Vector3(x*1.18,0.9,-0.56), Vector3(0.22,0.18,0.18), palette.dark)
-		_box(Vector3(x*1.12,-0.07,0), Vector3(0.25,0.13,1.7), palette.steel)
-		for z in [-1.25,1.28]:
-			_box(Vector3(x,0.28,z), Vector3(0.35,0.19,1.18), palette.dark)
-	_box(Vector3(0,0.24,-1.91), Vector3(1.86,0.34,0.12), palette.dark)
-	for x in range(-4,5):
-		_box(Vector3(x*0.13,0.25,-1.99), Vector3(0.055,0.27,0.045), palette.steel)
-	for x in [-0.73,0.73]:
-		_box(Vector3(x,0.43,-1.97), Vector3(0.27,0.22,0.06), Color("eed5a0"))
-		_box(Vector3(x,0.35,1.88), Vector3(0.23,0.25,0.06), palette.red)
-	for z in [-2.0,1.96]:
-		_box(Vector3(0,-0.03,z), Vector3(2.05,0.18,0.18), palette.steel)
-	# Open rack and visible strapped cargo establish the expedition silhouette.
-	for x in [-0.77,0.77]:
-		_box(Vector3(x,1.48,0.3), Vector3(0.09,0.29,1.96), palette.dark)
-	for z in [-0.66,-0.3,0.1,0.5,0.9,1.2]:
-		_box(Vector3(0,1.36,z), Vector3(1.6,0.07,0.07), palette.dark)
-	_box(Vector3(-0.33,1.57,0.5), Vector3(0.66,0.38,0.85), palette.rust)
-	_box(Vector3(0.38,1.51,0.55), Vector3(0.56,0.27,0.74), palette.cream)
-	for x in [-0.47,0.4]:
-		_box(Vector3(x,1.78,0.5), Vector3(0.055,0.045,0.87), palette.dark)
-	_cylinder(Vector3(0,0.76,1.98),0.43,0.32,palette.rubber,12,Vector3(PI/2,0,0))
-	_cylinder(Vector3(0,0.76,2.16),0.22,0.04,palette.steel,8,Vector3(PI/2,0,0))
-	_box(Vector3(0.94,1.28,-0.85),Vector3(0.09,1.6,0.1),palette.dark)
-	_box(Vector3(-0.76,0.9,1.92),Vector3(0.38,0.6,0.22),palette.green)
-	for x in [-0.4,0.4]:
-		_box(Vector3(x,0.94,-0.698),Vector3(0.68,0.43,0.025),Color("8495b1"))
-		_beam(Vector3(x-0.2,0.76,-0.72),Vector3(x+0.1,0.88,-0.72),0.025,palette.dark)
-		_box(Vector3(x,0.03,-2.14),Vector3(0.14,0.14,0.12),palette.red)
-	for x in [-0.96,0.96]:
-		for z in [-0.43,0.43]:
-			_box(Vector3(x,0.37,z),Vector3(0.025,0.3,0.025),palette.paint.darkened(0.2))
-		for z in [-1.0,-1.15,-1.3]:
-			_box(Vector3(x,0.52,z),Vector3(0.025,0.055,0.09),palette.dark)
-		_box(Vector3(x,0.18,0.1),Vector3(0.03,0.1,1.45),palette.sand)
-	_box(Vector3(0,0.24,2.07),Vector3(0.4,0.13,0.025),palette.cream)
-	_chips(Vector3(0,0.79,-1.25),Vector2(1.6,0.9),palette.paint,71)
 
 func _wreck(kind: int) -> void:
 	var paint: Color = [Color("c7b9a0"),Color("7d9e9b"),Color("bb8c7d"),Color("c9c3a8"),Color("939a78"),Color("76645f")][kind]
@@ -438,3 +391,98 @@ func _relay() -> void:
 		_box(Vector3(0,y,0),Vector3(2.6,0.08,0.08),palette.steel)
 	_cylinder(Vector3(0,7,0),1.2,0.12,palette.cream,12,Vector3(PI/3,0,0),0.7)
 	_box(Vector3(0,8.2,0),Vector3(0.09,1.5,0.09),palette.dark)
+
+func _expedition_vehicle(spec: Dictionary) -> void:
+	var w: float=spec.width
+	var l: float=spec.length
+	var roof: float=spec.roof
+	var seat: Vector3=spec.seat
+	var paint := Color(spec.color)
+	var front := -l/2
+	var cabin_front := seat.z-0.72
+	var cabin_back := seat.z+0.9
+	if spec.id=="scout":
+		cabin_back=l/2-0.3
+	var cabin_length := cabin_back-cabin_front
+	var sill := seat.y-0.35
+	_box(Vector3(0,0,0),Vector3(w*0.83,0.22,l),palette.dark)
+	_box(Vector3(0,0.35,0),Vector3(w,0.55,l),paint)
+	_box(Vector3(0,0.75,(front+cabin_front)/2),Vector3(w*0.96,0.22,cabin_front-front),paint.lightened(0.12))
+	_box(Vector3(0,roof,(cabin_front+cabin_back)/2),Vector3(w,0.14,cabin_length+0.14),paint)
+	for x in [-w/2,w/2]:
+		_box(Vector3(x,(sill+0.4)/2,(cabin_front+cabin_back)/2),Vector3(0.09,sill-0.4,cabin_length),paint)
+		for z in [cabin_front,cabin_back]:
+			_box(Vector3(x, (roof+0.8)/2,z),Vector3(0.1,roof-0.8,0.1),paint.lightened(0.18))
+		_box(Vector3(x*1.06,1.28,cabin_front+0.05),Vector3(0.19,0.27,0.18),palette.dark)
+		_box(Vector3(x*1.07,-0.06,seat.z),Vector3(0.25,0.15,1.7),palette.steel)
+		_box(Vector3(x*1.012,0.88,seat.z+0.25),Vector3(0.06,0.07,0.25),palette.cream)
+		for z in spec.axles:
+			_box(Vector3(x,0.35,z),Vector3(0.3,0.18,spec.radius*2.5),palette.dark)
+	# Exterior glass is on layer 2; the cockpit camera sees through clean apertures.
+	_glass(Vector3(0,(roof+sill)/2,cabin_front),Vector3(w*0.92,roof-sill-0.12,0.025))
+	_glass(Vector3(0,(roof+sill)/2,cabin_back),Vector3(w*0.92,roof-sill-0.12,0.025))
+	for side in [-1,1]:
+		_glass(Vector3(side*w/2,(roof+sill)/2,(cabin_front+cabin_back)/2),Vector3(0.025,roof-sill-0.12,cabin_length-0.12))
+		_box(Vector3(side*w/2,(roof+sill)/2,seat.z+0.43),Vector3(0.1,roof-sill,0.1),paint)
+		_box(Vector3(side*w*0.5,0.45,seat.z),Vector3(0.12,0.15,1.5),palette.sand)
+		for z in [seat.z-0.3,seat.z+0.45]:
+			_box(Vector3(side*w*0.504,0.72,z),Vector3(0.035,0.5,0.028),paint.darkened(0.18))
+	# Open window apertures and a complete interior keep the driver view unobstructed.
+	_box(Vector3(0,(sill+0.5)/2,cabin_back),Vector3(w,sill-0.5,0.12),paint)
+	_box(Vector3(0,seat.y-0.46,cabin_front+0.12),Vector3(w*0.9,0.25,0.4),palette.dark)
+	for x in [-w*0.23,w*0.23]:
+		_box(Vector3(x,seat.y-0.75,seat.z+0.2),Vector3(w*0.36,0.2,0.6),palette.dark)
+		_box(Vector3(x,seat.y-0.45,seat.z+0.48),Vector3(w*0.36,0.65,0.16),palette.rubber)
+		_box(Vector3(x,seat.y-0.06,seat.z+0.48),Vector3(0.3,0.2,0.14),palette.dark)
+	for x in [seat.x-0.15,seat.x+0.15]:
+		_cylinder(Vector3(x,seat.y-0.34,cabin_front+0.33),0.105,0.025,palette.cream,12,Vector3(PI/2,0,0))
+		_box(Vector3(x,seat.y-0.33,cabin_front+0.35),Vector3(0.012,0.13,0.015),palette.red,Vector3(0,0,-0.4))
+	_box(Vector3(0.25,seat.y-0.33,cabin_front+0.34),Vector3(0.3,0.13,0.035),palette.glass)
+	_box(Vector3(0,0.92,seat.z+0.1),Vector3(0.04,0.4,0.04),palette.steel)
+	_cylinder(Vector3(0,1.14,seat.z+0.1),0.065,0.07,palette.dark)
+	for z in [front-0.08,l/2+0.08]:
+		_box(Vector3(0,0.1,z),Vector3(w+0.18,0.24,0.22),palette.steel)
+	_box(Vector3(0,0.44,front-0.02),Vector3(w*0.56,0.38,0.08),palette.dark)
+	for x in range(-3,4):
+		_box(Vector3(x*w*0.065,0.44,front-0.07),Vector3(0.06,0.32,0.04),palette.steel)
+	for x in [-w*0.37,w*0.37]:
+		_box(Vector3(x,0.56,front-0.05),Vector3(0.3,0.23,0.07),Color("f5ddb0"))
+		_box(Vector3(x,0.45,l/2+0.02),Vector3(0.22,0.22,0.05),palette.red)
+	if spec.id in ["pickup","hauler"]:
+		var bed_start := cabin_back+0.1
+		var bed_length := l/2-bed_start
+		_box(Vector3(0,0.69,bed_start+bed_length/2),Vector3(w*0.86,0.1,bed_length),palette.dark)
+		for x in [-w/2,w/2]:
+			_box(Vector3(x,0.95,bed_start+bed_length/2),Vector3(0.12,0.55,bed_length),paint)
+		_box(Vector3(0,0.95,l/2),Vector3(w,0.55,0.13),paint)
+		_box(Vector3(-0.4,0.96,bed_start+0.55),Vector3(0.65,0.4,0.65),palette.rust)
+		if spec.id=="hauler":
+			for z in [bed_start+0.2,l/2-0.2]:
+				for x in [-w*0.46,w*0.46]:
+					_box(Vector3(x,1.6,z),Vector3(0.09,1.7,0.09),palette.dark)
+				_box(Vector3(0,2.42,z),Vector3(w,0.09,0.09),palette.dark)
+	else:
+		_cylinder(Vector3(0,0.9,l/2+0.13),0.46,0.28,palette.rubber,12,Vector3(PI/2,0,0))
+		_cylinder(Vector3(0,0.9,l/2+0.29),0.22,0.04,palette.steel,8,Vector3(PI/2,0,0))
+		for x in [-w*0.42,w*0.42]:
+			_box(Vector3(x,roof+0.2,seat.z+0.25),Vector3(0.08,0.2,1.4),palette.dark)
+		for z in [seat.z-0.4,seat.z+0.3,seat.z+0.9]:
+			_box(Vector3(0,roof+0.13,z),Vector3(w*0.85,0.06,0.08),palette.dark)
+		_box(Vector3(0.25,roof+0.32,seat.z+0.5),Vector3(0.6,0.3,0.65),palette.sand)
+	_box(Vector3(w*0.48,roof-0.4,cabin_front-0.1),Vector3(0.1,1.5,0.1),palette.dark)
+	_chips(Vector3(0,0.865,(front+cabin_front)/2),Vector2(w*0.8,maxf(0.2,cabin_front-front-0.1)),paint.darkened(0.1),72)
+
+func _glass(pos: Vector3, size: Vector3) -> void:
+	var visual := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size=size
+	visual.mesh=mesh
+	visual.position=pos
+	visual.layers=2
+	var material := StandardMaterial3D.new()
+	material.albedo_color=Color("738997")
+	material.roughness=0.32
+	material.metallic=0.25
+	visual.material_override=material
+	root_asset.add_child(visual)
+	visual.owner=root_asset

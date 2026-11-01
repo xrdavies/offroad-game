@@ -15,6 +15,19 @@
 
 也可用 Godot 打开 `project.godot`，等待导入完成后按 F6/F5 运行。默认使用 Metal / Forward+；兼容性诊断可传 `--rendering-method gl_compatibility`，该模式没有相同的环境遮蔽效果。
 
+## 0.3.0 越野探索更新
+
+![新版本实机画面](docs/previews/expedition.jpg)
+
+- 第一人称驾驶舱、动态方向盘、右键拖动观察；C 循环俯视、驾驶舱、追车、侧面跟拍、航拍。
+- 地图扩至 900×780 米（原面积的 9 倍），保留原废土中心，增加森林营地、山顶中继站、沙漠补给站、草原农场、泥地试车区与沼泽栈道，共 11 个发现地点。
+- 连通越野小径、地形起伏、路标及地图目的地标记；草木分区绘制，树干和大石块带碰撞。
+- Scout 旅行越野车、Ridge 短轴越野车、Ranger 皮卡、Atlas 六轮卡车。车重、轴距、轮径、悬挂行程、转向与动力不同；L 切换低速挡。
+- 轮胎接触处分别计算柏油、泥土、草地、森林、岩石、沙地、泥地、沼泽及浅水的抓地力和阻力。
+- macOS 游戏内 MP4 录制，包含游戏音效。可单独跟拍，玩家用第一人称驾驶、录像用第三人称拍摄；也可录下当前驾驶画面。
+
+这里的驾驶仍是带辅助稳定的越野模型，尚未实现完整机械传动、轮胎变形、可变形泥地、损伤和绞盘；新地图是参考风格下的原创扩展。
+
 ## 操作
 
 | 操作 | 按键 |
@@ -24,20 +37,35 @@
 | 回到修理站 | R |
 | 查看探索地图 | M |
 | 暂停、音量、退出 | Esc |
-| 缩放镜头 | 鼠标滚轮 |
+| 缩放俯视镜头 | 鼠标滚轮 |
+| 切换驾驶视角 | C |
+| 观察左右、上下 | 按住鼠标右键拖动，松开回正 |
+| 高速挡 / 低速越野挡 | L |
+| 车型选择（先停车） | V |
+| 录像开始 / 停止 | F9 |
+| 切换录像镜头 | F6；也可在 Esc 菜单选择 |
+| 打开录像目录 | F10 |
+| 隐藏 / 显示 HUD | H |
+| 设置目的地 | M 打开地图后单击 |
 
 ## 当前内容
 
-- 300 × 260 米的可驾驶地形：修理站、废车场、浅水河道、双桥、采石区与中继设施。
-- 22 个独立体素模型场景；六种破损废车、四类废料、车身、轮胎、设施和护栏都有可重建的源代码。
+- 900 × 780 米的可驾驶地形：修理站、废车场、浅水河道、双桥、采石区与中继设施。
+- 25 个独立体素模型场景；六种破损废车、四类废料、车身、轮胎、设施和护栏都有可重建的源代码。
 - 成片荒草、下垂棕榈叶、层状岩壁、可驾驶垃圾山、磨损路面和曲折浅滩；暖光、偏紫阴影与更近的跟随视角。
 - 四轮射线悬挂、前进/倒车、抓地力和手刹、涉水阻力、尘土、水花、限量轮迹。
 - 引擎、砂石胎噪、涉水、风声、碰撞、发现提示共 6 个原创声音文件。
-- 俯斜正交镜头、地点发现、地图、暂停和总音量控制。探索记录当前只保留在本次运行中。
+- 五种驾驶镜头、独立跟拍录像、地点发现、地图、暂停和总音量控制。探索记录当前只保留在本次运行中。
 
 素材来源与编辑方式见 [素材清单](docs/ASSETS.md)；参考视频拆解、地图推定范围见 [参考说明](docs/REFERENCE.md)；发布差距和实测记录见 [验收记录](docs/ACCEPTANCE.md)。视频中的塔防、升级系统和完整配乐范围仍待用户确认。
 
 本轮画面对照：[修改前后](docs/previews/comparison.png)、[废车场](docs/previews/yard.png)、[车辆近景](docs/previews/scout.png)、[浅滩行驶](docs/previews/river.png)。
+
+## 录像
+
+F9 开始，再按 F9 保存；F6 切换当前驾驶画面、追车、侧拍、航拍与每 8 秒自动切镜的导演模式。独立跟拍默认不包含 HUD；当前驾驶画面模式可用 H 隐藏 HUD。输出在 `~/Movies/Off Road Rider/`（F10 打开），是 H.264 + AAC 的 MP4，最高 1280×720、目标 30 FPS。实际帧率受硬件、视角与负载影响，使用真实时间戳，避免视频加速播放。
+
+编码器只接收游戏画面和游戏混音，不录桌面或麦克风，不依赖 FFmpeg。录制期间切换录像镜头不会改变驾驶镜头；正常退出会等待保存完成。若进程崩溃或编码失败，未完成文件可能保留为 `.partial.mp4`，不代表成功录像。当前不支持自动保存“过去 30 秒”的回放。
 
 ## 验证与构建
 
@@ -46,12 +74,14 @@
 ```sh
 godot --headless --path . --editor --import --quit
 godot --headless --path . --script tests/smoke.gd
+godot --headless --path . --script tests/expedition.gd
 godot --path . --script tests/capture.gd -- /tmp/off-road-rider-service.png
 ```
 
 冒烟测试验证接地、静止稳定、加速、转向、制动、重置、空中动力限制、涉水、暂停、双桥通行和垃圾山碰撞，并检查场景实例的空间分区。去掉 `--headless` 运行同一测试，还会验证渲染器中的实例变换与颜色（Godot 无界面渲染器不保存这两项）。检查输出中的 `SMOKE: PASS`，也要检查 `SCRIPT ERROR` / `ERROR`，不能只看退出码。
 
 ```sh
+sh tools/build_recorder.sh  # macOS + Xcode Command Line Tools
 mkdir -p build
 godot --headless --path . --export-pack macOS build/OffRoadRider.pck
 godot --main-pack build/OffRoadRider.pck
@@ -64,6 +94,7 @@ godot --main-pack build/OffRoadRider.pck
 在 macOS 上安装与引擎版本一致的官方导出模板（Godot 的 **Editor → Manage Export Templates**），然后在项目目录执行：
 
 ```sh
+sh tools/build_recorder.sh
 mkdir -p build
 godot --headless --path . --editor --import --quit
 godot --headless --path . --export-release macOS build/OffRoadRider.dmg
@@ -83,3 +114,15 @@ godot --headless --path . --editor --import --quit
 ```
 
 模型源文件是 `tools/build_assets.gd`，声音源文件是 `tools/build_audio.py`。地图地标和主路布局在 `assets/world/route.json`，地形、植被、桥梁和废料分布在 `world.gd`。旧的 `audio/` 是历史原型音频，当前游戏不再引用，导出时排除。
+
+### 新功能回归检查
+
+```sh
+godot --path . --script tests/capture_features.gd
+godot --path . --script tests/recording.gd
+python3 tests/check_recording.py "/path/from/RECORDING_FILE.mp4"
+```
+
+`capture_features.gd` 生成各区域、驾驶舱、车型和菜单的实机图；`recording.gd` 在真实时间下驾驶到 80 km/h 以上，切换独立镜头并验证停止、再次录制和退出保存。最后一个媒体检查需要开发机上的 FFmpeg，仅用于验证文件。
+
+`vehicles.gd` 是车型与地表驾驶参数；`regions.gd` 是新区域、小径和植被的可编辑源；`driving_camera.gd` 管理驾驶与跟拍视角。`native/recorder.swift` 使用系统 AVFoundation 编码，`tools/build_recorder.sh` 编译 universal helper，导出插件将其自动装入 PCK。构建需先编译 helper，玩家不需要开发工具。

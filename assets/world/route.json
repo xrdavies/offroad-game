@@ -1,13 +1,169 @@
 {
   "seed": 1931808,
-  "bounds": [150, 130],
-  "spawn": [-12, 24],
-  "road": [[-12,24],[-32,5],[-38,-28],[-24,-55],[8,-64],[36,-54],[60,-30],[62,10],[42,35],[10,36],[-12,24]],
+  "bounds": [
+    450,
+    390
+  ],
+  "spawn": [
+    -12,
+    24
+  ],
+  "road": [
+    [
+      -12,
+      24
+    ],
+    [
+      -32,
+      5
+    ],
+    [
+      -38,
+      -28
+    ],
+    [
+      -24,
+      -55
+    ],
+    [
+      8,
+      -64
+    ],
+    [
+      36,
+      -54
+    ],
+    [
+      60,
+      -30
+    ],
+    [
+      62,
+      10
+    ],
+    [
+      42,
+      35
+    ],
+    [
+      10,
+      36
+    ],
+    [
+      -12,
+      24
+    ]
+  ],
   "landmarks": [
-    {"id":"garage","name":"OFF ROAD RIDER SERVICE","position":[-14,5],"model":"garage","rotation":0},
-    {"id":"scrapyard","name":"OLD MOTOR YARD","position":[-65,-22],"model":"water_tank","rotation":0},
-    {"id":"wetlands","name":"THE FLOODWAY","position":[48,-70],"model":"utility_pole","rotation":0},
-    {"id":"relay","name":"NORTH RELAY","position":[-3,-99],"model":"relay","rotation":0},
-    {"id":"quarry","name":"RED QUARRY","position":[97,4],"model":"container","rotation":1.4}
+    {
+      "id": "garage",
+      "name": "OFF ROAD RIDER SERVICE",
+      "position": [
+        -14,
+        5
+      ],
+      "model": "garage",
+      "rotation": 0
+    },
+    {
+      "id": "scrapyard",
+      "name": "OLD MOTOR YARD",
+      "position": [
+        -65,
+        -22
+      ],
+      "model": "water_tank",
+      "rotation": 0
+    },
+    {
+      "id": "wetlands",
+      "name": "THE FLOODWAY",
+      "position": [
+        48,
+        -70
+      ],
+      "model": "utility_pole",
+      "rotation": 0
+    },
+    {
+      "id": "relay",
+      "name": "NORTH RELAY",
+      "position": [
+        -3,
+        -99
+      ],
+      "model": "relay",
+      "rotation": 0
+    },
+    {
+      "id": "quarry",
+      "name": "RED QUARRY",
+      "position": [
+        97,
+        4
+      ],
+      "model": "container",
+      "rotation": 1.4
+    },
+    {
+      "id": "forest",
+      "name": "PINEWOOD TRAIL",
+      "position": [
+        -265,
+        -130
+      ],
+      "model": "",
+      "rotation": 0
+    },
+    {
+      "id": "mountain",
+      "name": "HIGH RIDGE PASS",
+      "position": [
+        -225,
+        -280
+      ],
+      "model": "",
+      "rotation": 0
+    },
+    {
+      "id": "desert",
+      "name": "AMBER DUNES",
+      "position": [
+        265,
+        -165
+      ],
+      "model": "",
+      "rotation": 0
+    },
+    {
+      "id": "grassland",
+      "name": "WINDGRASS PLAINS",
+      "position": [
+        -260,
+        220
+      ],
+      "model": "",
+      "rotation": 0
+    },
+    {
+      "id": "mud",
+      "name": "RUTTED BASIN",
+      "position": [
+        -80,
+        210
+      ],
+      "model": "",
+      "rotation": 0
+    },
+    {
+      "id": "swamp",
+      "name": "CYPRESS MARSH",
+      "position": [
+        195,
+        205
+      ],
+      "model": "",
+      "rotation": 0
+    }
   ]
 }

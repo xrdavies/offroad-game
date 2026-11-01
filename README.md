@@ -126,3 +126,14 @@ python3 tests/check_recording.py "/path/from/RECORDING_FILE.mp4"
 `capture_features.gd` 生成各区域、驾驶舱、车型和菜单的实机图；`recording.gd` 在真实时间下驾驶到 80 km/h 以上，切换独立镜头并验证停止、再次录制和退出保存。最后一个媒体检查需要开发机上的 FFmpeg，仅用于验证文件。
 
 `vehicles.gd` 是车型与地表驾驶参数；`regions.gd` 是新区域、小径和植被的可编辑源；`driving_camera.gd` 管理驾驶与跟拍视角。`native/recorder.swift` 使用系统 AVFoundation 编码，`tools/build_recorder.sh` 编译 universal helper，导出插件将其自动装入 PCK。构建需先编译 helper，玩家不需要开发工具。
+
+驾驶舱细化后的车型包含圆角内饰、座椅缝线、精细方向盘、实时速度表和罗盘。按 `C` 切换到第一人称，按住鼠标右键查看仪表及副驾。仅重建车辆、检查仪表与生成第一人称实机截图：
+
+```sh
+godot --headless --path . --script tools/build_assets.gd -- --vehicles-only
+godot --headless --path . --editor --import
+godot --headless --path . --fixed-fps 60 --script tests/cockpit.gd
+godot --path . --resolution 1600x900 --script tests/cockpit.gd -- --capture
+```
+
+截图写入 `build/cockpit-*.png`；包含默认驾驶视角、隐藏 HUD 的同机位画面，以及驾驶位向右查看内饰的画面。

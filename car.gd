@@ -14,6 +14,9 @@ var radius := 0.48
 var rest := 0.65
 var low_range := false
 var steering_wheel: Node3D
+var speed_needle: Node3D
+var heading_needle: Node3D
+var speed_readout: Label3D
 var world: Node3D
 var start_position := Vector3.ZERO
 var start_yaw := 0.0
@@ -68,8 +71,13 @@ func _ready() -> void:
 	cabin_collision.shape=cabin_box
 	cabin_collision.position=Vector3(0,(spec.roof+0.6)/2,spec.seat.z)
 	add_child(cabin_collision)
-	add_child(load("res://assets/models/"+spec.id+"_body.tscn").instantiate())
-	_build_steering_wheel()
+	var body: Node3D = load("res://assets/models/"+spec.id+"_body.tscn").instantiate()
+	add_child(body)
+	steering_wheel = body.get_node("SteeringWheel")
+	speed_needle = body.get_node("SpeedNeedle")
+	heading_needle = body.get_node("HeadingNeedle")
+	speed_readout = body.get_node("SpeedReadout")
+	_update_dashboard(0)
 	for point in wheel_points:
 		var ray := RayCast3D.new()
 		ray.position=point
@@ -163,6 +171,7 @@ func _physics_process(delta: float) -> void:
 		apply_torque(Vector3.UP*(desired_yaw-angular_velocity.y)*mass*2.4*contact)
 		apply_torque(global_basis.y.cross(Vector3.UP)*mass*3.0)
 	steering_wheel.rotation.z=lerp_angle(steering_wheel.rotation.z,-steering*1.5,delta*9)
+	_update_dashboard(absf(speed)*3.6)
 	wheel_spin+=speed*delta/radius
 	var speed_ratio := clampf(absf(speed)/24,0,1)
 	engine_audio.pitch_scale=lerpf(engine_audio.pitch_scale,0.72+speed_ratio*1.25+absf(throttle)*0.16,delta*4)
@@ -257,28 +266,7 @@ func _add_tracks() -> void:
 			trail.surface_add_vertex(mark[i])
 	trail.surface_end()
 
-func _build_steering_wheel() -> void:
-	steering_wheel=Node3D.new()
-	steering_wheel.position=spec.seat+Vector3(0,-0.37,-0.56)
-	add_child(steering_wheel)
-	var rim := MeshInstance3D.new()
-	var torus := TorusMesh.new()
-	torus.inner_radius=0.19
-	torus.outer_radius=0.235
-	torus.rings=16
-	torus.ring_segments=6
-	rim.mesh=torus
-	rim.rotation.x=PI/2
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color=Color("333b39")
-	rim.material_override=mat
-	steering_wheel.add_child(rim)
-	for angle in [0.0,PI*2/3,PI*4/3]:
-		var spoke := MeshInstance3D.new()
-		var box := BoxMesh.new()
-		box.size=Vector3(0.04,0.22,0.035)
-		spoke.mesh=box
-		spoke.position=Vector3(sin(angle)*0.1,cos(angle)*0.1,0)
-		spoke.rotation.z=-angle
-		spoke.material_override=mat
-		steering_wheel.add_child(spoke)
+func _update_dashboard(kmh: float) -> void:
+	speed_needle.rotation.z = deg_to_rad(135-clampf(kmh/140,0,1)*270)
+	heading_needle.rotation.z = rotation.y
+	speed_readout.text = "%03d" % roundi(kmh)

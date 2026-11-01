@@ -37,3 +37,16 @@ macOS 导出模板不支持开发版的 `--script` 测试入口，因此包内�
 连续两次录制都成功保存；第二次在暂停后直接退出游戏，由退出流程完成保存。实际使用 PCK 内置的 238,688 字节 universal 编码器，未依赖源项目 `build/native`。两段文件均通过完整解码、非静音音轨、时间戳与轨道时长检查。
 
 DMG 大小：79,695,947 字节。SHA256：`c95ca74f7834efb3f43687cda3955f6be217b8d89dc5933b7af5cc2f54e1704a`。`hdiutil verify` 与 `codesign --verify --deep --strict` 均已通过。
+
+## 驾驶舱近景细化（2026-11-02，源项目更新）
+
+四款车型重建了驾驶舱和方向盘，调整了仪表前后关系及相机默认俯角，补齐高座舱前围。保留原有卡通配色与车外场景风格。
+
+- 资源导入、`tests/smoke.gd`、`tests/expedition.gd` 通过。
+- `tests/cockpit.gd` 验证四款车型的速度读数、0/70/140 km/h 指针标定、超量程限位、罗盘方向、方向盘响应和车窗剔除；无界面检查及 Metal 实际渲染检查均通过。
+- 1600×900 实机检查包含四款车的驾驶视角、隐藏 HUD 的同机位画面、车外侧视图及 Scout 的内饰与座椅，共 14 张截图；已检查实际画面，确认仪表可读、高车舱下方不再透出车外。
+- 截图时固定已停稳车辆，直接保存游戏视口。内饰照片使用同一驾驶位及视场角，仅旋转玩家相机；没有另设展示用模型、灯光或相机焦距。
+
+图像证据：[正常驾驶 HUD](previews/cockpit-driving.png)、[第一人称隐藏 HUD](previews/cockpit-forward.png)、[仪表与中控](previews/cockpit-interior.png)、[副驾座椅](previews/cockpit-seats.png)、[四车型对照](previews/cockpit-four-models.jpg)（从左上到右下：Scout、Ridge、Pickup、Hauler）。
+
+这是源项目的模型更新，已有 0.3.0 DMG 尚未重打包。未重复录制与高速残影专项验收；后视镜等装饰部件的交互限制见 `ASSETS.md`。截图回归不能代替全地图长时间性能测试或发布级美术验收。

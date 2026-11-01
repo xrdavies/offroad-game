@@ -44,7 +44,7 @@ func _process(delta: float) -> void:
 	if mode==1:
 		projection=Camera3D.PROJECTION_PERSPECTIVE
 		fov=78
-		global_transform=tr*Transform3D(Basis.from_euler(Vector3(look.y-0.05,look.x,0)),car.spec.seat)
+		global_transform=tr*Transform3D(Basis.from_euler(Vector3(look.y-0.12,look.x,0)),car.spec.seat)
 		snap=false
 		return
 	var target := tr.origin+Vector3.UP*0.9

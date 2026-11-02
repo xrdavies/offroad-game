@@ -79,3 +79,5 @@ DMG 大小：79,695,947 字节。SHA256：`c95ca74f7834efb3f43687cda3955f6be217b
 方向盘改为六种车型专属形状：Wrangler 三辐圆环、Unimog 四辐工业轮、F-150 粗三辐性能轮、Hilux 窄三辐工具轮、EQ246 四辐军用轮、WC-62 细三辐老式轮；仪表台和中央控制区域同步调整。实机 `tests/capture_fleet.gd` 截图逐车查看了驾驶位，没有发现方向盘、仪表、座椅、换挡杆或窗框的主要穿模。
 
 三轴车型的后两桥轴距调整为 Hauler `0.75/2.25`、EQ246 `1.05/2.60`、WC-62 `0.75/2.05`，并统一使用 `0.56 × 车宽` 的轮胎侧向位置。`tests/expedition.gd` 新增轴向轮胎直径间距和车体侧向间隙检查，`SMOKE`、`EXPEDITION`、`COCKPIT`、`MAPS` 及车队截图回归均通过。
+
+最终 demo：`/Users/m4002/mob-files/OffRoadRider-Demos/OffRoadRider-Demo-2026-11-03-v4.mp4`。视频为 1280×720、H.264/AAC、约 89 秒，通过 `tests/check_recording.py` 的完整解码、音视频时长、时间戳和音轨检查；SHA-256：`22f9a81aaefefeebba21e57e91d6f83c96ea87fd38832d0f202149fb94c29dfb`。

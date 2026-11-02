@@ -81,3 +81,14 @@ DMG 大小：79,695,947 字节。SHA256：`c95ca74f7834efb3f43687cda3955f6be217b
 三轴车型的后两桥轴距调整为 Hauler `0.75/2.25`、EQ246 `1.05/2.60`、WC-62 `0.75/2.05`，并统一使用 `0.56 × 车宽` 的轮胎侧向位置。`tests/expedition.gd` 新增轴向轮胎直径间距和车体侧向间隙检查，`SMOKE`、`EXPEDITION`、`COCKPIT`、`MAPS` 及车队截图回归均通过。
 
 最终 demo：`/Users/m4002/mob-files/OffRoadRider-Demos/OffRoadRider-Demo-2026-11-03-v4.mp4`。视频为 1280×720、H.264/AAC、约 89 秒，通过 `tests/check_recording.py` 的完整解码、音视频时长、时间戳和音轨检查；SHA-256：`22f9a81aaefefeebba21e57e91d6f83c96ea87fd38832d0f202149fb94c29dfb`。
+
+## 车型模型与驾驶舱复核（2026-11-03，源项目更新）
+
+本轮继续逐车修改十台模型并重新烘焙：外观保留原有卡通几何语言，同时强化参考车的前脸、车身比例、窗框、货厢/篷架、踏板、轮拱和六轮轴距；驾驶舱把方向盘、仪表台、中央控制台、换挡隧道、辅助表和侧向结构按车型分开建模。Wrangler 使用短中控、车身色面板和红色抓手；Unimog 使用高位开关台、深传动隧道和工业方向盘；F-150 使用宽屏中控和高置中央通道；Hilux 使用窄双层面板和手动挡台；EQ246 使用平头军车的橄榄色冲压台、辅助表和长低通道；WC-62 使用低位钢制仪表条、三只简洁圆表和开放帆布立柱。
+
+- 资源重新烘焙后，`tests/smoke.gd`、`tests/maps.gd`、`tests/expedition.gd`、`tests/cockpit.gd` 全部通过。
+- Metal / Forward+ 实机逐车截图已重新生成并查看。车内视口没有发现方向盘、仪表台、座椅、换挡杆、窗框或六轮车后桥之间的主要穿模；`tests/expedition.gd` 同时检查了相邻轮胎直径间距和车体侧向间隙。
+- 外观和驾驶舱最终确认图：[十车外观接触表](previews/vehicle-exterior-final.jpg)、[十车驾驶舱接触表](previews/vehicle-cockpit-final.jpg)。同步目录副本在 `/Users/m4002/mob-files/OffRoadRider-Model-Review-2026-11-03/`。
+- 新 demo：`/Users/m4002/mob-files/OffRoadRider-Demos/OffRoadRider-Demo-2026-11-03-v5.mp4`，1280×720、H.264/AAC、约 89.84 秒；`tests/check_recording.py` 完整解码和音视频时长检查通过。SHA-256：`7365c90716c2eb089f0c9adf1d1b99391842f718417b6748a70851daab15f652`。
+
+截图和 demo 用于模型确认，仍属于项目内原创卡通几何资产，不是厂商实车 CAD 或一比一内饰复刻。模型与驾驶舱细节已按参考资料进行分型，实际商业发布仍需要专门的美术验收和各车型授权审查。

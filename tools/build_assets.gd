@@ -684,6 +684,13 @@ func _cockpit_signature(spec: Dictionary, cabin_front: float) -> void:
 			for side in [-1,1]:
 				_beam(Vector3(side*w*0.43,seat.y-0.08,seat.z-0.70),Vector3(side*w*0.43,seat.y-0.34,seat.z-0.70),0.035,Color("b55c4e"))
 			_rounded_box(Vector3(0,seat.y-0.56,seat.z-0.25),Vector3(0.16,0.08,0.12),0.025,Color("6f4f3d"))
+			# The Wrangler has a short, upright centre stack rather than a wide
+			# integrated console.  Keep the grab handles and body-colour fascia in
+			# the camera's lower field so the open-air cab reads immediately.
+			_rounded_box(Vector3(w*0.14,seat.y-0.50,face_z+0.18),Vector3(0.23,0.30,0.055),0.018,Color("6f4f3d"))
+			_rounded_box(Vector3(w*0.14,seat.y-0.43,face_z+0.215),Vector3(0.15,0.10,0.018),0.006,Color("263a32"))
+			for i in 3:
+				_rounded_box(Vector3(w*0.14+(i-1)*0.052,seat.y-0.57,face_z+0.19),Vector3(0.034,0.035,0.018),0.006,Color("c6a55f"))
 		"unimog":
 			# U5023 cues: high dark instrument shelf, switch rail and grab bar.
 			_rounded_box(Vector3(0,dash_y+0.05,face_z+0.12),Vector3(w*0.90,0.16,0.08),0.025,Color("454d49"))
@@ -692,6 +699,13 @@ func _cockpit_signature(spec: Dictionary, cabin_front: float) -> void:
 				_rounded_box(p,Vector3(0.048,0.04,0.022),0.006,Color("a0a78d") if i%3 else Color("c78855"))
 			_beam(Vector3(w*0.25,seat.y-0.12,face_z+0.17),Vector3(w*0.44,seat.y-0.12,face_z+0.17),0.025,Color("a7aa91"))
 			_rounded_box(Vector3(w*0.30,seat.y-0.43,face_z+0.15),Vector3(0.24,0.10,0.026),0.01,Color("25312e"))
+			# A Unimog's cab sits high over the chassis.  Add the vertical centre
+			# stack and deep transmission tunnel that are visible below the shelf.
+			_rounded_box(Vector3(w*0.18,seat.y-0.53,face_z+0.18),Vector3(0.30,0.43,0.09),0.025,Color("3d4842"))
+			_rounded_box(Vector3(w*0.18,seat.y-0.39,face_z+0.235),Vector3(0.22,0.16,0.018),0.006,Color("182722"))
+			for i in 4:
+				_box(Vector3(w*0.18+(i-1.5)*0.052,seat.y-0.59,face_z+0.235),Vector3(0.028,0.045,0.016),Color("bda66d"))
+			_rounded_box(Vector3(0,seat.y-0.72,seat.z-0.20),Vector3(0.34,0.20,0.92),0.045,Color("303b35"))
 		"f150":
 			# Raptor cues: broad digital binnacle, centre screen and orange trim.
 			_rounded_box(Vector3(0,dash_y+0.03,face_z+0.135),Vector3(w*0.82,0.18,0.04),0.025,Color("252d2f"))
@@ -700,6 +714,14 @@ func _cockpit_signature(spec: Dictionary, cabin_front: float) -> void:
 			for x in [-w*0.38,-w*0.27,w*0.30,w*0.40]:
 				_cylinder(Vector3(x,dash_y-0.01,face_z+0.17),0.026,0.018,Color("c98651"),16,Vector3(PI/2,0,0))
 			_rounded_box(Vector3(0,seat.y-0.61,seat.z-0.28),Vector3(0.12,0.13,0.16),0.025,Color("30383a"))
+			# The crew cab uses a broad horizontal dash and a raised centre
+			# console.  These layered planes make the screen and console occupy a
+			# different volume from the narrow utility cabs.
+			_rounded_box(Vector3(w*0.17,dash_y-0.13,face_z+0.21),Vector3(0.46,0.24,0.075),0.022,Color("1f292d"))
+			_rounded_box(Vector3(w*0.17,dash_y-0.11,face_z+0.255),Vector3(0.34,0.14,0.015),0.006,Color("75989a"))
+			_rounded_box(Vector3(w*0.13,seat.y-0.69,seat.z-0.24),Vector3(0.40,0.18,0.92),0.055,Color("252d2f"))
+			for x in [-0.06,0.06]:
+				_cylinder(Vector3(w*0.13+x,seat.y-0.56,seat.z-0.31),0.034,0.018,Color("b07e55"),20,Vector3(PI/2,0,0))
 		"hilux":
 			# Hilux cues: compact dark fascia, amber switch row and manual tunnel.
 			_rounded_box(Vector3(0,dash_y+0.02,face_z+0.125),Vector3(w*0.56,0.16,0.035),0.02,Color("4c5750"))
@@ -707,6 +729,13 @@ func _cockpit_signature(spec: Dictionary, cabin_front: float) -> void:
 			for i in 5:
 				_box(Vector3(-w*0.22+i*w*0.11,seat.y-0.29,face_z+0.17),Vector3(0.035,0.026,0.012),Color("c6a35d") if i%2 else Color("9da58c"))
 			_rounded_box(Vector3(0,seat.y-0.62,seat.z-0.30),Vector3(0.10,0.12,0.18),0.025,Color("59615a"))
+			# Hilux keeps a slim, two-tier fascia and a pronounced manual
+			# transmission tunnel.  The narrow centre screen leaves the passenger
+			# side open, unlike the F-150's wide console.
+			_rounded_box(Vector3(w*0.16,dash_y-0.11,face_z+0.18),Vector3(0.28,0.23,0.065),0.018,Color("39443f"))
+			_rounded_box(Vector3(w*0.16,dash_y-0.07,face_z+0.22),Vector3(0.20,0.11,0.014),0.005,Color("8fa39a"))
+			_rounded_box(Vector3(0,seat.y-0.72,seat.z-0.20),Vector3(0.24,0.18,0.82),0.04,Color("3c4640"))
+			_cylinder(Vector3(0,seat.y-0.54,seat.z-0.31),0.045,0.18,Color("9d9e85"),20)
 		"eq246":
 			# EQ246 cues: olive pressed-metal dash and exposed military toggles.
 			_rounded_box(Vector3(0,dash_y+0.05,face_z+0.12),Vector3(w*0.94,0.21,0.06),0.025,Color("596648"))
@@ -716,6 +745,13 @@ func _cockpit_signature(spec: Dictionary, cabin_front: float) -> void:
 			for x in [-0.18,0.0,0.18]:
 				_gauge(Vector3(x,seat.y-0.30,face_z+0.18),0.055,false)
 			_beam(Vector3(w*0.29,seat.y-0.08,face_z+0.17),Vector3(w*0.43,seat.y-0.08,face_z+0.17),0.035,Color("a9ad88"))
+			# The flat-head military cab has a broad pressed-metal ledge, a
+			# separate centre switch box and a long low tunnel between the seats.
+			_rounded_box(Vector3(0,dash_y-0.12,face_z+0.205),Vector3(w*0.92,0.28,0.09),0.028,Color("4d5b42"))
+			_rounded_box(Vector3(w*0.20,seat.y-0.51,face_z+0.23),Vector3(0.30,0.31,0.075),0.018,Color("2b3930"))
+			for i in 5:
+				_box(Vector3(w*0.20+(i-2)*0.052,seat.y-0.42,face_z+0.275),Vector3(0.026,0.042,0.016),Color("c2b271") if i%2 else Color("6f8260"))
+			_rounded_box(Vector3(0,seat.y-0.73,seat.z-0.18),Vector3(0.38,0.20,0.98),0.045,Color("4c5a43"))
 		"wc62":
 			# WC-62 cues: sparse painted steel, three simple gauges and a canvas rail.
 			_rounded_box(Vector3(0,dash_y+0.02,face_z+0.10),Vector3(w*0.88,0.16,0.035),0.015,Color("6a6c4c"))
@@ -723,6 +759,12 @@ func _cockpit_signature(spec: Dictionary, cabin_front: float) -> void:
 				_gauge(Vector3(x,seat.y-0.31,face_z+0.15),0.058,true if x==0 else false)
 			for side in [-1,1]:
 				_beam(Vector3(side*w*0.43,seat.y+0.02,cabin_front+0.1),Vector3(side*w*0.43,seat.y+0.54,cabin_front+0.1),0.028,Color("343d35"))
+			# Keep the WC-62 low and open: a narrow steel instrument strip,
+			# exposed lower edge and canvas side rails replace the modern centre
+			# stack used by the pickups.
+			_rounded_box(Vector3(0,dash_y-0.11,face_z+0.165),Vector3(w*0.86,0.20,0.055),0.016,Color("5b6044"))
+			_rounded_box(Vector3(-w*0.18,seat.y-0.48,face_z+0.20),Vector3(0.20,0.20,0.048),0.012,Color("4d523c"))
+			_rounded_box(Vector3(0,seat.y-0.72,seat.z-0.16),Vector3(0.18,0.14,0.82),0.028,Color("4c4f3a"))
 
 func _fender(x: float, z: float, radius: float, color: Color) -> void:
 	for i in 12:

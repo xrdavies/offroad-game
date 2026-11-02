@@ -65,3 +65,7 @@ DMG 大小：79,695,947 字节。SHA256：`c95ca74f7834efb3f43687cda3955f6be217b
 [十车外观](previews/fleet-all.jpg)和[驾驶舱对照](previews/fleet-drivers.jpg)，从上到下每行两台：Scout / Ridge、Ranger / Atlas、Wrangler / Unimog、F-150 / Hilux、EQ246 / WC-62。[三地图截图](previews/maps-overview.jpg)每行分别为原图、海岸图、高山图；[地图选择菜单](previews/map-destinations.png)。
 
 本轮不包含新的安装包。切图时现场生成地图，会有加载等待；发现记录尚未跨次启动保存。地图和车型仍使用卡通几何风格，内饰共用项目风格，并非实车内饰逐项复刻；车辆碰撞使用简化外形。本轮验证没有覆盖全部路线、长期性能、新地图下的完整录像媒体检查，也没有重复显示器端高速残影专项验收。上述 PASS 不表示已经达到商业发布验收标准。
+
+## 车型识别与攀岩区复核（2026-11-03，源项目更新）
+
+六台参考车型补充了结构性外观细节，并重新烘焙十台车身资源。`tests/smoke.gd`、`tests/expedition.gd`、`tests/cockpit.gd` 和 `tests/maps.gd` 均通过；`tests/capture_fleet.gd` 与 `tests/capture_maps.gd` 通过并查看了实际 Metal 视口截图。攀岩区截图改为近景，确认车辆、中央阶梯、错位巨石、侧坡、护栏和旗杆同时可见。地图测试额外验证六轮车从入口路线前进并保持直立。新版 demo 录制完成后，媒体校验结果会与文件路径一起记录在交付说明中。

@@ -20,7 +20,7 @@ func _run() -> void:
 	await frames(100)
 	scene.switch_vehicle(4)
 	var locations := [
-		[["ruins",Vector2(-520,80),Vector3(68,40,85)], ["crawl",Vector2(-490,-340),Vector3(36,23,32)], ["lake",Vector2(-445,350),Vector3(100,52,130)]],
+		[["ruins",Vector2(-520,80),Vector3(68,40,85)], ["crawl",Vector2(-520,-345),Vector3(12,6,15)], ["lake",Vector2(-445,350),Vector3(100,52,130)]],
 		[["beach",Vector2(-462,80),Vector3(58,35,70)], ["harbor",Vector2(-260,-210),Vector3(70,42,95)], ["dunes",Vector2(290,-260),Vector3(70,30,60)]],
 		[["snow",Vector2(130,-400),Vector3(90,55,95)], ["ice",Vector2(330,-20),Vector3(90,50,95)], ["forest",Vector2(-270,80),Vector3(55,27,50)]]]
 	for index in 3:

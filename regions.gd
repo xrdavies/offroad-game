@@ -277,16 +277,57 @@ func _rock_mesh() -> ArrayMesh:
 	return surface.commit()
 
 func _build_crawl(world: Node3D, center: Vector2) -> void:
-	# A marked two-lane course: shallow steps alongside offset articulation humps.
-	for i in 14:
-		var p := center+Vector2((i-7)*3.5,0)
-		var height := 0.16+(i%4)*0.055
-		world._box(Vector3(p.x,world.height_at(p.x,p.y)+height/2,p.y),Vector3(1.2,height,4.8),Color("94998e"),true)
-		p.y+=8
-		world._box(Vector3(p.x,world.height_at(p.x,p.y)+0.16,p.y+(0.7 if i%2 else -0.7)),Vector3(1.4,0.32,1.3),Color("9a9c8e"),true)
-	for x in [-30,30]:
+	# A visible granite gate: a stepped central line, two boulder lanes and a
+	# banked side route. The exact centre remains driveable so the map test and
+	# the demo can approach the obstacle field without spawning inside a rock.
+	for i in 16:
+		var p: Vector2=center+Vector2(-48.0+i*6.0,0)
+		var height: float=0.34+(i%5)*0.12
+		var lane_z: float=p.y+1.35+sin(i*0.8)*0.35
+		world._box(Vector3(p.x,world.height_at(p.x,lane_z)+height/2,lane_z),Vector3(5.2,height,2.3),Color("858b83").lightened((i%3)*0.025),true)
+		var cap: float=0.12+(i%3)*0.04
+		world._box(Vector3(p.x,world.height_at(p.x,lane_z)+height+cap/2,lane_z-0.15),Vector3(3.6,cap,1.7),Color("a1a396"),true)
+	# A small centre marker makes the raised collision obvious from the map picker
+	# while leaving the normal probe at centre - (2,2) unobstructed.
+	var marker_y: float=world.height_at(center.x,center.y)
+	world._box(Vector3(center.x,marker_y+0.32,center.y),Vector3(1.5,0.64,0.72),Color("9aa095"),true)
+	var rock_mesh:=_rock_mesh()
+	var rock_shape:=rock_mesh.create_convex_shape()
+	var boulder_transforms: Array[Transform3D]=[]
+	for i in 18:
+		var lane: float=-1.0 if i%2==0 else 1.0
+		var p: Vector2=center+Vector2(-51.0+(i/2)*6.0,lane*8.5+sin(i*1.7)*1.3)
+		var scale: float=1.7+(i%4)*0.32
+		var y: float=world.height_at(p.x,p.y)
+		var basis:=Basis(Vector3.UP,(i*0.71)+lane*0.18).scaled(Vector3(scale*1.35,scale,scale*0.92))
+		var tr:=Transform3D(basis,Vector3(p.x,y+scale*0.44,p.y))
+		boulder_transforms.append(tr)
+		var body:=StaticBody3D.new()
+		var collision:=CollisionShape3D.new()
+		collision.shape=rock_shape
+		body.add_child(collision)
+		world.add_child(body)
+		body.transform=tr
+	world._multimesh(boulder_transforms,rock_mesh,Color("727a73"),true)
+	# A pair of tilted ledges creates a clear side-slope line for the camera.
+	for side in [-1,1]:
+		for i in 4:
+			var p: Vector2=center+Vector2(-36.0+i*18.0,side*13.5)
+			var y: float=world.height_at(p.x,p.y)
+			var bank: Node3D=world._box(Vector3(p.x,y+0.45,p.y),Vector3(15.0,0.9,4.2),Color("777f78"),true)
+			bank.rotation.z=side*0.20
+	for side in [-1,1]:
+		var rail_z: float=center.y+side*18.5
+		world._beam(Vector3(center.x-58,world.height_at(center.x-58,rail_z)+0.25,rail_z),Vector3(center.x+58,world.height_at(center.x+58,rail_z)+0.25,rail_z),0.10,Color("c5ab70"))
+		for x in [-54,-18,18,54]:
+			var post_y: float=world.height_at(center.x+x,rail_z)
+			world._box(Vector3(center.x+x,post_y+0.625,rail_z),Vector3(0.07,1.25,0.07),Color("c5ab70"))
+	for x in [-56,56]:
 		world._asset("barrel",Vector3(center.x+x,0,center.y-4))
-	world._label("ROCK CRAWL  /  LOW RANGE",Vector3(center.x-29,world.height_at(center.x-29,center.y)+2.5,center.y-4),0.013)
+		var flag_y: float=world.height_at(center.x+x,center.y-4)+0.7
+		world._box(Vector3(center.x+x,flag_y+1.7,center.y-4),Vector3(0.055,3.4,0.055),Color("3f4a45"))
+		world._box(Vector3(center.x+x,world.height_at(center.x+x,center.y-4)+4.15,center.y-4),Vector3(1.15,0.55,0.06),Color("d37b50"))
+	world._label("GRANITE GATE  /  ROCK CRAWL",Vector3(center.x-34,world.height_at(center.x-34,center.y)+7.8,center.y-5),0.016)
 
 func _build_ruins(world: Node3D, center: Vector2) -> void:
 	for i in 8:

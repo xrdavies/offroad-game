@@ -755,6 +755,73 @@ func _expedition_vehicle(spec: Dictionary) -> void:
 				_round_lamp(Vector3(side*w*0.37,nose_y,front-0.08),0.12)
 			else:
 				_rounded_box(Vector3(side*w*0.38,nose_y,front-0.08),Vector3(0.28,0.18,0.045),0.03,Color("eee0b8"))
+	# Reference-specific body signatures. These are deliberately structural details so the
+	# silhouettes remain readable in the garage and in the chase camera at a distance.
+	if spec.id=="wrangler":
+		# Squared removable hardtop, exposed hinges, black arch flares and tow hooks.
+		for side in [-1,1]:
+			for z in [cabin_front+0.18,cabin_back-0.20]:
+				_cylinder(Vector3(side*w*0.532,seat.y+0.1,z),0.055,0.11,palette.dark,12,Vector3(0,0,PI/2))
+			_rounded_box(Vector3(side*w*0.56,0.37,0.02),Vector3(0.16,0.12,2.85),0.035,palette.dark)
+		for x in [-0.22,0.22]:
+			_box(Vector3(x,hood_y+0.19,front+0.33),Vector3(0.06,0.045,0.18),palette.dark,Vector3(0,0.12,0))
+		for side in [-1,1]:
+			_cylinder(Vector3(side*w*0.31,0.23,front-0.23),0.045,0.32,palette.red,12,Vector3(PI/2,0,0))
+			_beam(Vector3(side*w*0.55,0.42,front+0.2),Vector3(side*w*0.55,0.42,front+1.0),0.055,palette.dark)
+	elif spec.id=="unimog":
+		# Tall cab-over proportions: portal hubs, visor, split glass and wide expedition steps.
+		for z in spec.axles:
+			for side in [-1,1]:
+				_cylinder(Vector3(side*w*0.57,-0.20,z),0.19,0.10,palette.steel,16,Vector3(0,0,PI/2))
+				_cylinder(Vector3(side*w*0.57,-0.20,z),0.08,0.112,palette.dark,12,Vector3(0,0,PI/2))
+		_beam(Vector3(-w*0.39,roof+0.16,cabin_front-0.05),Vector3(w*0.39,roof+0.16,cabin_front-0.05),0.075,palette.dark)
+		_box(Vector3(0,roof+0.10,cabin_front-0.13),Vector3(w*0.82,0.12,0.28),paint)
+		_box(Vector3(0,(roof+sill)/2,cabin_front-0.012),Vector3(0.04,roof-sill-0.14,0.04),palette.dark)
+		for side in [-1,1]:
+			_beam(Vector3(side*w*0.52,seat.y+0.12,cabin_front+0.18),Vector3(side*w*0.70,seat.y+0.15,cabin_front+0.18),0.035,palette.dark)
+			_rounded_box(Vector3(side*w*0.72,seat.y+0.18,cabin_front+0.18),Vector3(0.20,0.24,0.07),0.025,palette.glass)
+			_rounded_box(Vector3(side*w*0.53,0.22,seat.z+0.18),Vector3(0.30,0.13,0.72),0.035,palette.dark)
+	elif spec.id=="f150":
+		# Wide crew-cab shoulders, raised centre bonnet, squared flares and a sports bed.
+		_rounded_box(Vector3(0,hood_y+0.12,front+0.42),Vector3(w*0.43,0.13,0.72),0.045,paint.lightened(0.08))
+		for side in [-1,1]:
+			_fender(side*w*0.55,spec.axles[0],spec.radius+0.22,Color("27343d"))
+			_fender(side*w*0.55,spec.axles[1],spec.radius+0.22,Color("27343d"))
+			_rounded_box(Vector3(side*w*0.56,0.68,seat.z-0.03),Vector3(0.14,0.16,1.9),0.035,Color("27343d"))
+			_rounded_box(Vector3(side*w*0.52,seat.y+0.18,cabin_front+0.24),Vector3(0.20,0.12,0.07),0.025,palette.dark)
+		for row in 2:
+			_box(Vector3(0,hood_y+0.20+row*0.055,front+0.42),Vector3(0.12,0.018,0.38),palette.dark)
+	elif spec.id=="hilux":
+		# Narrower Japanese utility silhouette: snorkel, bull bar, slanted lamps and bed hoop.
+		_beam(Vector3(w*0.39,0.70,front+0.16),Vector3(w*0.39,1.50,front+0.16),0.055,palette.dark)
+		_beam(Vector3(w*0.39,1.50,front+0.16),Vector3(w*0.42,1.68,front+0.16),0.055,palette.dark)
+		for side in [-1,1]:
+			_beam(Vector3(side*w*0.48,0.38,front-0.18),Vector3(side*w*0.48,0.58,front+0.42),0.045,palette.dark)
+			_rounded_box(Vector3(side*w*0.53,0.56,seat.z),Vector3(0.11,0.13,1.78),0.03,palette.dark)
+		for x in [-w*0.36,w*0.36]:
+			_beam(Vector3(x,0.79,cabin_back+0.16),Vector3(x,1.64,cabin_back+0.16),0.055,palette.dark)
+		_beam(Vector3(-w*0.36,1.64,cabin_back+0.16),Vector3(w*0.36,1.64,cabin_back+0.16),0.055,palette.dark)
+	elif spec.id=="eq246":
+		# Tall military cab-over: split windscreen, corner markers, mirrors and recovery bar.
+		for side in [-1,1]:
+			_box(Vector3(side*w*0.42,nose_y+0.22,front-0.13),Vector3(0.09,0.22,0.035),Color("e7bd65"))
+			_beam(Vector3(side*w*0.48,seat.y+0.20,cabin_front+0.15),Vector3(side*w*0.70,seat.y+0.24,cabin_front+0.15),0.04,palette.dark)
+			_rounded_box(Vector3(side*w*0.72,seat.y+0.28,cabin_front+0.15),Vector3(0.20,0.24,0.08),0.02,palette.glass)
+		_beam(Vector3(-w*0.45,0.42,front-0.22),Vector3(w*0.45,0.42,front-0.22),0.075,palette.dark)
+		for side in [-1,1]:
+			_cylinder(Vector3(side*w*0.31,0.18,front-0.27),0.05,0.30,palette.red,12,Vector3(PI/2,0,0))
+	elif spec.id=="wc62":
+		# Open-cab 6x6 profile: long bonnet, canvas hoops, wood slat sides and round lamps.
+		for side in [-1,1]:
+			_beam(Vector3(side*w*0.49,0.42,cabin_front+0.08),Vector3(side*w*0.49,1.66,cabin_front+0.08),0.055,palette.dark)
+			_rounded_box(Vector3(side*w*0.53,0.38,seat.z),Vector3(0.13,0.14,1.7),0.03,palette.dark)
+		for z in [cabin_front+0.18,cabin_front+0.58]:
+			_beam(Vector3(-w*0.47,roof-0.03,z),Vector3(w*0.47,roof-0.03,z),0.05,palette.dark)
+		for side in [-1,1]:
+			for z in [cabin_back+0.2,cabin_back+0.85,cabin_back+1.5]:
+				_box(Vector3(side*w*0.505,1.23,z),Vector3(0.04,0.62,0.07),Color("765c42"))
+		for side in [-1,1]:
+			_cylinder(Vector3(side*w*0.36,nose_y+0.02,front-0.10),0.13,0.065,Color("e0c98f"),24,Vector3(PI/2,0,0))
 	for z in [front-0.12,l/2+0.09]:
 		_rounded_box(Vector3(0,0.19,z),Vector3(w+0.12,0.22,0.23),0.055,palette.dark)
 		for x in [-w*0.3,w*0.3]:

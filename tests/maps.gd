@@ -81,7 +81,8 @@ func _run() -> void:
 			var query := PhysicsRayQueryParameters3D.create(at+Vector3.UP*5,at-Vector3.UP)
 			var hit: Dictionary=world.get_world_3d().direct_space_state.intersect_ray(query)
 			check(not hit.is_empty() and hit.position.y>at.y+0.29,"Rock course steps must have raised collision")
-			scene.car.reset_to_start(Vector3(center.x-31,world.height_at(center.x-31,center.y)+1.7,center.y))
+			var crawl_z: float=center.y-5.0
+			scene.car.reset_to_start(Vector3(center.x-31,world.height_at(center.x-31,crawl_z)+1.7,crawl_z))
 			scene.car.reset_yaw=-PI/2
 			scene.car.low_range=true
 			await frames(120)

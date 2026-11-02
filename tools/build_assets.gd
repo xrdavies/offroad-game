@@ -184,25 +184,75 @@ func _gauge(pos: Vector3, radius: float, speedometer: bool) -> void:
 	_needle(face+Vector3(0,0,0.008), radius*0.78, "SpeedNeedle" if speedometer else "HeadingNeedle")
 	_cylinder(face+Vector3(0,0,0.012), 0.009, 0.01, Color("a1afa3"), 24, Vector3(PI/2,0,0))
 
-func _steering(seat: Vector3) -> void:
+func _steering(spec: Dictionary) -> void:
+	var seat: Vector3=spec.seat
 	var body_surface := surface
 	surface = SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-	_ring(Vector3.ZERO, 0.205, 0.019, Color("263730"))
-	_ring(Vector3(0,0,0.012), 0.205, 0.002, Color("a69d7a"))
-	for side in [-1,1]:
-		_rounded_box(Vector3(side*0.117,-0.015,0),Vector3(0.18,0.041,0.025),0.009,Color("84958b"),Vector3(0,0,side*0.18))
-		_rounded_box(Vector3(side*0.1,-0.012,0.018),Vector3(0.052,0.029,0.009),0.004,Color("263730"))
-		for y in [-0.018,-0.006]:
-			_box(Vector3(side*0.1,y,0.024),Vector3(0.012,0.002,0.002),Color("b8c3ac"))
-	_rounded_box(Vector3(0,-0.11,0),Vector3(0.045,0.18,0.025),0.012,Color("84958b"))
-	_rounded_box(Vector3(0,-0.008,0.026),Vector3(0.13,0.09,0.044),0.025,Color("3d4b40"))
-	# An original mountain emblem, with no real vehicle branding.
-	for side in [-1,1]:
-		_box(Vector3(side*0.012,0.0,0.049),Vector3(0.004,0.035,0.003),Color("c6c6a3"),Vector3(0,0,side*0.6))
+	var radius: float=0.205
+	var rim:=Color("263730")
+	var accent:=Color("a69d7a")
+	if spec.id=="unimog" or spec.id=="eq246":
+		radius=0.235
+		rim=Color("354039")
+		accent=Color("c1b68c")
+	elif spec.id=="f150":
+		radius=0.225
+		rim=Color("202c30")
+		accent=Color("c67b4e")
+	elif spec.id=="hilux" or spec.id=="wc62":
+		radius=0.19
+		rim=Color("202a27")
+		accent=Color("a3a78d")
+	_ring(Vector3.ZERO,radius,0.022,rim)
+	_ring(Vector3(0,0,0.014),radius,0.003,accent)
+	match spec.id:
+		"wrangler":
+			# Three thick spokes and a body-colour horn pad evoke the open-air JL cab.
+			for angle in [-0.34,0.34]:
+				_rounded_box(Vector3(sin(angle)*radius*0.52,cos(angle)*radius*0.52,0.008),Vector3(0.19,0.045,0.028),0.01,Color("8d9b8c"),Vector3(0,0,angle))
+			_rounded_box(Vector3(0,-radius*0.52,0.008),Vector3(0.045,0.19,0.028),0.01,Color("8d9b8c"))
+			_rounded_box(Vector3(0,-0.005,0.034),Vector3(0.15,0.10,0.05),0.025,Color(spec.color))
+			_box(Vector3(0,0.004,0.064),Vector3(0.035,0.02,0.008),Color("2d3c32"))
+		"unimog":
+			# Large four-spoke industrial wheel with a broad rectangular hub.
+			for angle in [-0.72,0.72]:
+				_rounded_box(Vector3(sin(angle)*radius*0.48,cos(angle)*radius*0.48,0.008),Vector3(0.24,0.05,0.03),0.012,Color("8d988b"),Vector3(0,0,angle))
+			_rounded_box(Vector3(0,-radius*0.48,0.008),Vector3(0.05,0.22,0.03),0.012,Color("8d988b"))
+			_rounded_box(Vector3(0,radius*0.48,0.008),Vector3(0.05,0.22,0.03),0.012,Color("8d988b"))
+			_rounded_box(Vector3(0,0,0.04),Vector3(0.17,0.12,0.055),0.025,Color("303c37"))
+		"f150":
+			# Thick three-spoke performance wheel with a squared lower rim.
+			for angle in [-0.38,0.38]:
+				_rounded_box(Vector3(sin(angle)*radius*0.55,cos(angle)*radius*0.55,0.008),Vector3(0.22,0.05,0.03),0.012,Color("bac0b4"),Vector3(0,0,angle))
+			_rounded_box(Vector3(0,-radius*0.50,0.008),Vector3(0.05,0.20,0.03),0.012,Color("bac0b4"))
+			_rounded_box(Vector3(0,-radius*0.88,0.008),Vector3(0.23,0.038,0.03),0.012,rim)
+			_rounded_box(Vector3(0,0,0.04),Vector3(0.17,0.11,0.05),0.022,Color("34434a"))
+		"hilux":
+			# Slim three-spoke utility wheel and a small silver centre pad.
+			for angle in [-0.42,0.42]:
+				_beam(Vector3(0,0,0.01),Vector3(sin(angle)*radius*0.70,cos(angle)*radius*0.70,0.01),0.028,Color("a8b0a1"))
+			_beam(Vector3(0,0,0.01),Vector3(0,-radius*0.70,0.01),0.028,Color("a8b0a1"))
+			_rounded_box(Vector3(0,0,0.038),Vector3(0.13,0.09,0.04),0.022,Color("59665e"))
+		"eq246":
+			# Large four-spoke military wheel, with a visible plain steel hub.
+			for angle in [-0.58,0.58]:
+				_beam(Vector3(0,0,0.01),Vector3(sin(angle)*radius*0.72,cos(angle)*radius*0.72,0.01),0.039,Color("a9ad91"))
+			_beam(Vector3(0,0,0.01),Vector3(0,-radius*0.72,0.01),0.039,Color("a9ad91"))
+			_beam(Vector3(0,0,0.01),Vector3(0,radius*0.72,0.01),0.039,Color("a9ad91"))
+			_rounded_box(Vector3(0,0,0.04),Vector3(0.19,0.13,0.05),0.025,Color("68734f"))
+		"wc62":
+			# Thin vintage three-spoke wheel suited to the open military cab.
+			for angle in [-0.45,0.45]:
+				_beam(Vector3(0,0,0.01),Vector3(sin(angle)*radius*0.72,cos(angle)*radius*0.72,0.01),0.022,Color("9d9a7a"))
+			_beam(Vector3(0,0,0.01),Vector3(0,-radius*0.72,0.01),0.022,Color("9d9a7a"))
+			_rounded_box(Vector3(0,0,0.038),Vector3(0.12,0.08,0.038),0.018,Color("6f694f"))
+	# Original cars keep the shared expedition wheel with a neutral centre.
+	if spec.id in ["scout","ridge","pickup","hauler"]:
+		_rounded_box(Vector3(0,0,0.035),Vector3(0.13,0.09,0.044),0.025,Color("3d4b40"))
 	for i in 40:
 		var a := i*TAU/40
-		_box(Vector3(sin(a)*0.2,cos(a)*0.2,0.018),Vector3(0.004,0.008,0.002),Color("8c967f"),Vector3(0,0,-a))
+		_box(Vector3(sin(a)*radius,cos(a)*radius,0.023),Vector3(0.004,0.008,0.002),Color("8c967f"),Vector3(0,0,-a))
 	_mesh_node("SteeringWheel", seat+Vector3(0,-0.34,-0.64))
 	surface = body_surface
 
@@ -614,7 +664,7 @@ func _cockpit(spec: Dictionary, cabin_front: float) -> void:
 		_beam(Vector3(x,seat.y-0.2,cabin_front+0.045),Vector3(x-0.14,seat.y-0.11,cabin_front+0.045),0.013,charcoal)
 		_rounded_box(Vector3(x-0.13,seat.y-0.11,cabin_front+0.052),Vector3(0.34,0.014,0.016),0.006,Color("1e3028"),Vector3(0,0,0.10))
 	_cylinder(seat+Vector3(0,-0.34,-0.81),0.025,0.30,charcoal,24,Vector3(PI/2,0,0))
-	_steering(seat)
+	_steering(spec)
 	_cockpit_signature(spec,cabin_front)
 
 func _cockpit_signature(spec: Dictionary, cabin_front: float) -> void:
@@ -738,6 +788,7 @@ func _expedition_vehicle(spec: Dictionary) -> void:
 	var cabin_back: float=l/2-0.3 if wagon else seat.z+(1.12 if spec.id in ["f150","hilux"] else 0.9)
 	var cabin_length := cabin_back-cabin_front
 	var sill := seat.y-0.35
+	var wheel_side: float=0.56 if spec.axles.size()==3 else 0.52
 	var rake: float=0.26 if spec.id in ["f150","hilux","pickup"] else 0.10 if spec.id in ["scout","unimog"] else 0.03
 	var hood_y: float=seat.y-0.55 if spec.id in ["unimog","eq246"] else 0.86
 	var hood_width: float=w*(0.64 if spec.id=="wc62" else 0.84 if spec.id=="wrangler" else 0.96)
@@ -748,7 +799,7 @@ func _expedition_vehicle(spec: Dictionary) -> void:
 		_cylinder(Vector3(0,-0.20,z),0.065,w*1.04,palette.steel,16,Vector3(0,0,PI/2))
 		_rounded_box(Vector3(0,-0.20,z),Vector3(0.3,0.24,0.25),0.075,palette.dark)
 		for side in [-1,1]:
-			_fender(side*w*0.52,z,spec.radius+0.17,palette.dark if spec.id in ["ridge","wrangler","f150"] else paint)
+			_fender(side*w*wheel_side,z,spec.radius+0.17,palette.dark if spec.id in ["ridge","wrangler","f150"] else paint)
 	_rounded_box(Vector3(0,0.22,0),Vector3(w*0.77,0.26,l*0.97),0.10,paint)
 	_rounded_box(Vector3(0,hood_y-0.14,(front+cabin_front)/2),Vector3(hood_width,0.36,maxf(0.10,cabin_front-front)),0.09,paint)
 	for side in [-1,1]:
@@ -944,7 +995,7 @@ func _expedition_vehicle(spec: Dictionary) -> void:
 		_rounded_box(Vector3(w*0.48,roof+0.12,cabin_front-0.11),Vector3(0.14,0.09,0.16),0.03,palette.dark)
 	for side in [-1,1]:
 		for z in spec.axles:
-			_box(Vector3(side*w*0.51,-0.12,z+spec.radius+0.17),Vector3(0.34,0.34,0.045),palette.rubber)
+			_box(Vector3(side*w*wheel_side,-0.12,z+spec.radius+0.17),Vector3(0.34,0.34,0.045),palette.rubber)
 	if spec.id=="eq246":
 		for side in [-1,1]:
 			for y in [0.13,0.43,0.73]:

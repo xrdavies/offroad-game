@@ -28,6 +28,13 @@ func _run() -> void:
 		for trail in world.REGIONS.TRAILS:
 			for point in trail:
 				check(absf(point.x)<world.SIZE.x-10 and absf(point.y)<world.SIZE.y-10,"Trails must stay within boundaries")
+	for spec in scene.VEHICLES.SPECS:
+		for axle_a in range(spec.axles.size()):
+			for axle_b in range(axle_a+1,spec.axles.size()):
+				check(absf(float(spec.axles[axle_b])-float(spec.axles[axle_a]))>float(spec.radius)*2.04,"Tire clearance between axles: "+spec.id)
+		var side_offset: float=0.56 if spec.axles.size()==3 else 0.52
+		var tire_half_width: float=0.23*float(spec.radius)/0.48
+		check(side_offset*float(spec.width)-tire_half_width>float(spec.width)*0.435-0.14,"Tire clears body side: "+spec.id)
 	for index in scene.VEHICLES.SPECS.size():
 		scene.switch_vehicle(index)
 		var car: RigidBody3D=scene.car

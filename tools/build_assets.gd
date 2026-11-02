@@ -517,6 +517,18 @@ func _cockpit(spec: Dictionary, cabin_front: float) -> void:
 	var trim := Color(spec.color).darkened(0.28)
 	var charcoal := Color("36453d")
 	var leather := Color("817859")
+	if spec.id=="wrangler":
+		leather=Color("6f4f3d")
+	elif spec.id=="unimog":
+		leather=Color("4f5b52")
+	elif spec.id=="f150":
+		leather=Color("343b3d")
+	elif spec.id=="hilux":
+		leather=Color("5e645d")
+	elif spec.id=="eq246":
+		leather=Color("707b54")
+	elif spec.id=="wc62":
+		leather=Color("6b6048")
 	var face_z := seat.z-0.84
 	# Close the footwell at seat-relative height, including the taller truck cab.
 	_box(Vector3(0,seat.y-0.88,seat.z-0.04),Vector3(w*0.97,0.10,1.96),charcoal)
@@ -603,6 +615,64 @@ func _cockpit(spec: Dictionary, cabin_front: float) -> void:
 		_rounded_box(Vector3(x-0.13,seat.y-0.11,cabin_front+0.052),Vector3(0.34,0.014,0.016),0.006,Color("1e3028"),Vector3(0,0,0.10))
 	_cylinder(seat+Vector3(0,-0.34,-0.81),0.025,0.30,charcoal,24,Vector3(PI/2,0,0))
 	_steering(seat)
+	_cockpit_signature(spec,cabin_front)
+
+func _cockpit_signature(spec: Dictionary, cabin_front: float) -> void:
+	# The common instruments keep gameplay readable, while these overlays make
+	# the first-person view follow each reference cab's own visual language.
+	var seat: Vector3=spec.seat
+	var w: float=spec.width
+	var face_z: float=seat.z-0.84
+	var dash_y: float=seat.y-0.40
+	match spec.id:
+		"wrangler":
+			# JL cues: body-colour fascia, circular vents and red grab handles.
+			_rounded_box(Vector3(0,dash_y,face_z+0.13),Vector3(w*0.40,0.12,0.026),0.012,Color(spec.color))
+			for x in [-w*0.34,w*0.34]:
+				_cylinder(Vector3(x,dash_y-0.01,face_z+0.15),0.052,0.018,Color("1f2927"),24,Vector3(PI/2,0,0))
+				_cylinder(Vector3(x,dash_y-0.01,face_z+0.164),0.032,0.012,Color("a8ab91"),20,Vector3(PI/2,0,0))
+			for side in [-1,1]:
+				_beam(Vector3(side*w*0.43,seat.y-0.08,seat.z-0.70),Vector3(side*w*0.43,seat.y-0.34,seat.z-0.70),0.035,Color("b55c4e"))
+			_rounded_box(Vector3(0,seat.y-0.56,seat.z-0.25),Vector3(0.16,0.08,0.12),0.025,Color("6f4f3d"))
+		"unimog":
+			# U5023 cues: high dark instrument shelf, switch rail and grab bar.
+			_rounded_box(Vector3(0,dash_y+0.05,face_z+0.12),Vector3(w*0.90,0.16,0.08),0.025,Color("454d49"))
+			for i in 7:
+				var p:=Vector3(-w*0.30+i*w*0.10,seat.y-0.30,face_z+0.17)
+				_rounded_box(p,Vector3(0.048,0.04,0.022),0.006,Color("a0a78d") if i%3 else Color("c78855"))
+			_beam(Vector3(w*0.25,seat.y-0.12,face_z+0.17),Vector3(w*0.44,seat.y-0.12,face_z+0.17),0.025,Color("a7aa91"))
+			_rounded_box(Vector3(w*0.30,seat.y-0.43,face_z+0.15),Vector3(0.24,0.10,0.026),0.01,Color("25312e"))
+		"f150":
+			# Raptor cues: broad digital binnacle, centre screen and orange trim.
+			_rounded_box(Vector3(0,dash_y+0.03,face_z+0.135),Vector3(w*0.82,0.18,0.04),0.025,Color("252d2f"))
+			_rounded_box(Vector3(w*0.17,dash_y-0.02,face_z+0.16),Vector3(0.33,0.13,0.03),0.014,Color("253c43"))
+			_rounded_box(Vector3(w*0.17,dash_y-0.02,face_z+0.18),Vector3(0.26,0.06,0.008),0.004,Color("9db3a2"))
+			for x in [-w*0.38,-w*0.27,w*0.30,w*0.40]:
+				_cylinder(Vector3(x,dash_y-0.01,face_z+0.17),0.026,0.018,Color("c98651"),16,Vector3(PI/2,0,0))
+			_rounded_box(Vector3(0,seat.y-0.61,seat.z-0.28),Vector3(0.12,0.13,0.16),0.025,Color("30383a"))
+		"hilux":
+			# Hilux cues: compact dark fascia, amber switch row and manual tunnel.
+			_rounded_box(Vector3(0,dash_y+0.02,face_z+0.125),Vector3(w*0.56,0.16,0.035),0.02,Color("4c5750"))
+			_rounded_box(Vector3(w*0.14,dash_y-0.01,face_z+0.155),Vector3(0.27,0.12,0.028),0.012,Color("243b3a"))
+			for i in 5:
+				_box(Vector3(-w*0.22+i*w*0.11,seat.y-0.29,face_z+0.17),Vector3(0.035,0.026,0.012),Color("c6a35d") if i%2 else Color("9da58c"))
+			_rounded_box(Vector3(0,seat.y-0.62,seat.z-0.30),Vector3(0.10,0.12,0.18),0.025,Color("59615a"))
+		"eq246":
+			# EQ246 cues: olive pressed-metal dash and exposed military toggles.
+			_rounded_box(Vector3(0,dash_y+0.05,face_z+0.12),Vector3(w*0.94,0.21,0.06),0.025,Color("596648"))
+			for i in 6:
+				var p:=Vector3(-w*0.27+i*w*0.11,seat.y-0.27,face_z+0.18)
+				_rounded_box(p,Vector3(0.052,0.06,0.026),0.008,Color("c6b678") if i%2 else Color("29392d"))
+			for x in [-0.18,0.0,0.18]:
+				_gauge(Vector3(x,seat.y-0.30,face_z+0.18),0.055,false)
+			_beam(Vector3(w*0.29,seat.y-0.08,face_z+0.17),Vector3(w*0.43,seat.y-0.08,face_z+0.17),0.035,Color("a9ad88"))
+		"wc62":
+			# WC-62 cues: sparse painted steel, three simple gauges and a canvas rail.
+			_rounded_box(Vector3(0,dash_y+0.02,face_z+0.10),Vector3(w*0.88,0.16,0.035),0.015,Color("6a6c4c"))
+			for x in [-0.18,0.0,0.18]:
+				_gauge(Vector3(x,seat.y-0.31,face_z+0.15),0.058,true if x==0 else false)
+			for side in [-1,1]:
+				_beam(Vector3(side*w*0.43,seat.y+0.02,cabin_front+0.1),Vector3(side*w*0.43,seat.y+0.54,cabin_front+0.1),0.028,Color("343d35"))
 
 func _fender(x: float, z: float, radius: float, color: Color) -> void:
 	for i in 12:
@@ -698,8 +768,24 @@ func _expedition_vehicle(spec: Dictionary) -> void:
 				for y in [0.55,0.9]:
 					_box(Vector3(side*w*0.523,y,z-0.34),Vector3(0.045,0.065,0.10),paint.lightened(0.1))
 		if not open_cab:
-			_window_quad([Vector3(side*w/2,sill+0.06,cabin_front+0.05),Vector3(side*w/2,roof-0.06,cabin_front+rake+0.05),Vector3(side*w/2,roof-0.06,cabin_back-0.05),Vector3(side*w/2,sill+0.06,cabin_back-0.05)])
+			var window_x: float=side*w/2
+			if spec.id=="wrangler":
+				# JL-style removable door glazing: a short front door pane and a
+				# separate rear quarter pane under the squared hardtop.
+				_window_quad([Vector3(window_x,sill+0.06,cabin_front+0.08),Vector3(window_x,roof-0.06,cabin_front+rake+0.09),Vector3(window_x,roof-0.06,seat.z+0.22),Vector3(window_x,sill+0.06,seat.z+0.18)])
+				_window_quad([Vector3(window_x,sill+0.06,seat.z+0.34),Vector3(window_x,roof-0.06,seat.z+0.30),Vector3(window_x,roof-0.06,cabin_back-0.06),Vector3(window_x,sill+0.06,cabin_back-0.06)])
+			elif spec.id in ["f150","hilux"]:
+				# Double-cab pickups use two framed panes with a pronounced B-pillar.
+				_window_quad([Vector3(window_x,sill+0.06,cabin_front+0.06),Vector3(window_x,roof-0.06,cabin_front+rake+0.07),Vector3(window_x,roof-0.06,seat.z-0.08),Vector3(window_x,sill+0.06,seat.z-0.13)])
+				_window_quad([Vector3(window_x,sill+0.06,seat.z+0.08),Vector3(window_x,roof-0.06,seat.z+0.03),Vector3(window_x,roof-0.06,cabin_back-0.06),Vector3(window_x,sill+0.06,cabin_back-0.06)])
+			elif spec.id=="unimog":
+				# The high U5023 cab has one large, nearly rectangular side pane.
+				_window_quad([Vector3(window_x,sill+0.06,cabin_front+0.07),Vector3(window_x,roof-0.06,cabin_front+0.10),Vector3(window_x,roof-0.06,cabin_back-0.05),Vector3(window_x,sill+0.06,cabin_back-0.05)])
+			else:
+				_window_quad([Vector3(window_x,sill+0.06,cabin_front+0.05),Vector3(window_x,roof-0.06,cabin_front+rake+0.05),Vector3(window_x,roof-0.06,cabin_back-0.05),Vector3(window_x,sill+0.06,cabin_back-0.05)])
 			_box(Vector3(side*w/2,(roof+sill)/2,seat.z+0.43),Vector3(0.07,roof-sill,0.07),paint)
+			if spec.id in ["wrangler","f150","hilux"]:
+				_box(Vector3(window_x,(roof+sill)/2,seat.z+0.02),Vector3(0.055,roof-sill-0.08,0.055),paint.darkened(0.18))
 	if not open_cab:
 		_rounded_box(Vector3(0,roof,(cabin_front+rake+cabin_back)/2),Vector3(w,0.12,cabin_length-rake+0.14),0.05,palette.dark if spec.id=="wrangler" else paint)
 		_rounded_box(Vector3(0,roof-0.065,(cabin_front+cabin_back)/2),Vector3(w-0.14,0.035,cabin_length),0.014,Color("9a9c7b"))

@@ -69,3 +69,7 @@ DMG 大小：79,695,947 字节。SHA256：`c95ca74f7834efb3f43687cda3955f6be217b
 ## 车型识别与攀岩区复核（2026-11-03，源项目更新）
 
 六台参考车型补充了结构性外观细节，并重新烘焙十台车身资源。`tests/smoke.gd`、`tests/expedition.gd`、`tests/cockpit.gd` 和 `tests/maps.gd` 均通过；`tests/capture_fleet.gd` 与 `tests/capture_maps.gd` 通过并查看了实际 Metal 视口截图。攀岩区截图改为近景，确认车辆、中央阶梯、错位巨石、侧坡、护栏和旗杆同时可见。地图测试额外验证六轮车从入口路线前进并保持直立。新版 demo 录制完成后，媒体校验结果会与文件路径一起记录在交付说明中。
+
+## 侧窗与驾驶室复核（2026-11-03，源项目更新）
+
+侧窗和第一视角驾驶室按车型参考重新分型：Wrangler 分段可拆门窗，F-150/Hilux 使用双排分窗，Unimog 使用高位大侧窗，EQ246 使用平头军车窗框，WC-62 保持开放驾驶室。驾驶室增加车型专属仪表台、开关、座椅材质和外挂视野元素。模型重新烘焙后，`tests/smoke.gd`、`tests/maps.gd`、`tests/expedition.gd`、`tests/cockpit.gd` 及车队/地图实际截图回归全部通过。参考来源已记录在 `docs/FLEET_AND_MAPS.md`。

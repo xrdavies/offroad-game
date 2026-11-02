@@ -21,6 +21,10 @@
 
 本次外观复核进一步强化了参考车型的轮廓识别：Wrangler 增加七孔直立前脸、外露铰链、黑色硬顶和红色拖钩；Unimog 增加高置平头驾驶室、分体前窗、门户轮毂、外置后视镜和高踏板；F-150 使用宽体轮拱、隆起发动机盖和双排驾驶室肩线；Hilux 使用窄体车身、涉水进气管、前防撞杆和货斗防滚架；EQ246 使用平头分体窗、角灯、外置后视镜和三轴恢复杆；WC-62 使用长机盖、开放驾驶室、圆灯、木质货厢侧板和帆布架。细节均由项目几何素材生成，不使用厂商标志。
 
+侧窗与内饰复核参考了车型资料和实车图像：Wrangler JL 的可拆车门分段玻璃、开放车顶和圆形出风口参考 [Jeep Wrangler 内饰资料](https://www.jeep.sk/novy-wrangler/interieri)；Unimog 的高位大侧窗、分体前窗、黑灰开关台和多功能驾驶位参考 [Mercedes-Benz Unimog 越野驾驶室资料](https://www.mercedes-benz-trucks.com/gh/en/trucks/unimog-offroad.html)；F-150 的双排分窗、宽体驾驶室和现代化中控参考 [Ford F-150 Raptor 资料](https://www.ford.com/trucks/f150/models/raptor/)；Hilux 的双排侧窗、后滑窗和耐用型黑色内饰参考 [Toyota Hilux 资料](https://www.toyota-gib.com/en/models/hilux.html)。EQ246 的平头分体风挡、可开启侧窗和帆布货箱参考 [EQ246 车型图说](https://chejiahao.autohome.com.cn/info/2055064)；WC-62 的开放式驾驶室、简洁钢制仪表台和三轴军用车厢参考 [Tucson Military Vehicle Museum](https://www.tucsonmilitaryvehicle.org/exhibit/dodge-wc-62-personnel-cargo-carrier-1%C2%BD-ton-6x6/) 与 [Dodge WC-62 图像资料](https://commons.wikimedia.org/wiki/Category%3ADodge_WC-62)。
+
+六台参考车型的第一视角现在共享基础仪表功能，但使用独立的方向盘前围、仪表台颜色、座椅材质、开关布局和外挂结构；这保留了统一卡通美术语言，同时让切换车辆时能从驾驶位识别车型。
+
 Old Frontier 的 GRANITE GATE 攀岩区由中央连续阶梯、两侧错位巨石、倾斜侧坡、路线护栏和旗杆组成，巨石与台阶均有物理碰撞。入口从 `(-520,-345)` 附近进入，低速挡可沿中央路线或两侧巨石线通过；地图截图回归使用近景机位检查车辆与障碍物的相对尺度。
 
 ## 三张地图

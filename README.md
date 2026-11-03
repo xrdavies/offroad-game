@@ -6,6 +6,8 @@
 
 当前版本 **0.4.0**：[版本说明](docs/RELEASE_0.4.0.md)。包含最新十车型驾驶舱、三地图、车型/地形声音，以及原创背景曲和独立音乐音量。
 
+下一阶段先打磨现有车队和地图，再增加任务玩法：[车型打磨计划](docs/VEHICLE_POLISH_PLAN.md) · [地图场景打磨计划](docs/MAP_POLISH_PLAN.md)
+
 ## 运行
 
 引擎：Godot 4.7.2。当前 Mac 安装于 `/Users/m4002/Applications/Godot.app`。在项目目录依次执行：

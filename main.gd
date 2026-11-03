@@ -8,6 +8,7 @@ const RECORDER := preload("res://recorder.gd")
 const MAP := preload("res://map.gd")
 const WIND := preload("res://assets/audio/wind.wav")
 const DISCOVERY := preload("res://assets/audio/discovery.wav")
+const MUSIC := preload("res://assets/audio/open_tracks.ogg")
 var world: Node3D
 var car: RigidBody3D
 var camera: Camera3D
@@ -21,6 +22,8 @@ var discovered: Array[String]=[]
 var spawn_point: Vector3
 var wind: AudioStreamPlayer
 var chime: AudioStreamPlayer
+var music: AudioStreamPlayer
+var music_volume: HSlider
 var zoom := 24.0
 var ui: Control
 var quitting := false
@@ -74,6 +77,11 @@ func _ready() -> void:
 	chime.stream=DISCOVERY
 	chime.volume_db=-16
 	add_child(chime)
+	music=AudioStreamPlayer.new()
+	music.stream=MUSIC
+	music.volume_linear=0.14
+	add_child(music)
+	music.play()
 	_ui()
 	_setup_recording()
 
@@ -264,8 +272,8 @@ func _ui() -> void:
 	map_panel.hide()
 	pause_panel=PanelContainer.new()
 	pause_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	pause_panel.position=Vector2(-180,-160)
-	pause_panel.size=Vector2(360,320)
+	pause_panel.position=Vector2(-180,-245)
+	pause_panel.size=Vector2(360,490)
 	pause_panel.add_theme_stylebox_override("panel",_panel())
 	ui.add_child(pause_panel)
 	var column := VBoxContainer.new()
@@ -288,6 +296,12 @@ func _ui() -> void:
 	AudioServer.set_bus_volume_db(0,linear_to_db(0.75))
 	volume.value_changed.connect(func(value: float): AudioServer.set_bus_volume_db(0,linear_to_db(maxf(value/100,0.0001))))
 	column.add_child(volume)
+	column.add_child(_label("MUSIC VOLUME",12,Color("d3d1be")))
+	music_volume=HSlider.new()
+	music_volume.max_value=100
+	music_volume.value=35
+	music_volume.value_changed.connect(func(value: float): music.volume_linear=value/100*0.4)
+	column.add_child(music_volume)
 	var quit_button := Button.new()
 	quit_button.text="Quit"
 	quit_button.pressed.connect(_quit)
@@ -425,7 +439,7 @@ func _quit() -> void:
 	while recorder.finishing:
 		await get_tree().process_frame
 	car.stop_audio()
-	for player in [wind,chime]:
+	for player in [wind,chime,music]:
 		player.stop()
 	# Let the audio thread release its active playback before closing the window.
 	await get_tree().create_timer(0.15,true).timeout

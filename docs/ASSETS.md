@@ -34,8 +34,9 @@
 | `wind.wav` | 8 秒 | 低音量环境风声 |
 | `impact.wav` | 0.48 秒 | 有实际碰撞和速度突变时触发 |
 | `discovery.wav` | 1 秒 | 第一次发现地点时触发 |
+| `open_tracks.ogg` | 96 秒 | 原创背景曲，立体声循环，Esc 菜单独立音乐音量 |
 
-均为 44.1 kHz / 16-bit / 单声道 WAV；使用项目内确定性合成程序生成，循环带交叉衔接、去直流偏移与峰值校验。Godot 通过标准导入资源加载。这里没有完整配乐，也没有声称已完成专业听音和混音验收。
+音效为 44.1 kHz / 16-bit / 单声道 WAV；背景曲为 44.1 kHz 立体声 Ogg Vorbis。使用项目内确定性合成程序生成，包含循环接缝、去直流偏移与峰值校验。Godot 通过标准导入资源加载。新增配乐来源与重建见 [0.4.0 说明](RELEASE_0.4.0.md)，尚未完成专业听音和混音验收。
 
 车型选型、地形声音设计、重建方法、验证与限制见 [驾驶音效说明](DRIVING_AUDIO.md)。旧通用 `engine.wav/gravel.wav/water.wav` 仍保留，当前游戏已不用；新资源由 `tools/build_driving_audio.py` 和 `assets/audio/profiles.json` 生成，并纳入原有 `tools/build_audio.py` 重建命令。
 

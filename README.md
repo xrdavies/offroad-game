@@ -4,6 +4,8 @@
 
 ![实机画面](docs/previews/service.png)
 
+当前版本 **0.4.0**：[版本说明](docs/RELEASE_0.4.0.md)。包含最新十车型驾驶舱、三地图、车型/地形声音，以及原创背景曲和独立音乐音量。
+
 ## 运行
 
 引擎：Godot 4.7.2。当前 Mac 安装于 `/Users/m4002/Applications/Godot.app`。在项目目录依次执行：
@@ -56,10 +58,10 @@
 - 31 个独立模型场景；六种破损废车、四类废料、车身、轮胎、设施和护栏都有可重建的源代码。
 - 成片荒草、下垂棕榈叶、层状岩壁、可驾驶垃圾山、磨损路面和曲折浅滩；暖光、偏紫阴影与更近的跟随视角。
 - 四轮或六轮射线悬挂、前进/倒车、抓地力和手刹、涉水阻力、尘土、水花、限量轮迹。
-- 十车型各两层引擎声、十二种地形行驶声，以及风声、碰撞和发现提示，共 35 个当前使用的原创声音文件。
+- 十车型各两层引擎声、十二种地形行驶声、风声、碰撞和发现提示，以及 96 秒原创背景曲，共 36 个当前使用的原创声音文件。
 - 五种驾驶镜头、独立跟拍录像、地点发现、地图、暂停和总音量控制。探索记录当前只保留在本次运行中。
 
-素材来源与编辑方式见 [素材清单](docs/ASSETS.md)；参考视频拆解、地图推定范围见 [参考说明](docs/REFERENCE.md)；发布差距和实测记录见 [验收记录](docs/ACCEPTANCE.md)。视频中的塔防、升级系统和完整配乐范围仍待用户确认。
+素材来源与编辑方式见 [素材清单](docs/ASSETS.md)；参考视频拆解、地图推定范围见 [参考说明](docs/REFERENCE.md)；发布差距和实测记录见 [验收记录](docs/ACCEPTANCE.md)。当前配乐为原创探索循环曲；视频中的塔防、升级系统尚未纳入本游戏。
 
 本轮画面对照：[修改前后](docs/previews/comparison.png)、[废车场](docs/previews/yard.png)、[车辆近景](docs/previews/scout.png)、[浅滩行驶](docs/previews/river.png)。
 
@@ -103,11 +105,11 @@ godot --main-pack build/OffRoadRider.pck
 sh tools/build_recorder.sh
 mkdir -p build
 godot --headless --path . --editor --import --quit
-godot --headless --path . --export-release macOS build/OffRoadRider.dmg
-hdiutil verify build/OffRoadRider.dmg
+godot --headless --path . --export-release macOS build/OffRoadRider-0.4.0.dmg
+hdiutil verify build/OffRoadRider-0.4.0.dmg
 ```
 
-打开 `build/OffRoadRider.dmg`，把其中的 `Off Road Rider.app` 拖到“应用程序”后启动；玩家无需安装 Godot。默认导出包含 Apple Silicon 和 Intel 两种架构，仍需在各目标机型验证图形兼容性。
+打开 `build/OffRoadRider-0.4.0.dmg`，把其中的 `Off Road Rider.app` 拖到“应用程序”后启动；玩家无需安装 Godot。默认导出包含 Apple Silicon 和 Intel 两种架构，仍需在各目标机型验证图形兼容性。
 
 当前导出使用临时签名（ad-hoc），没有 Apple Developer ID 签名或公证；通过网络下载后，macOS 可能拦截首次启动。正式分发前需要配置开发者证书并完成公证，详见 [Godot macOS 导出说明](https://docs.godotengine.org/en/4.7/tutorials/export/exporting_for_macos.html)。安装包仍属于开发测试版本，不表示已完成游戏发布验收。`build/` 中的产物不提交到 Git。
 

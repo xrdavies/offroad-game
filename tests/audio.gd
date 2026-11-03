@@ -25,6 +25,13 @@ func _run() -> void:
 	current_scene=scene
 	await frames(120)
 	check(AudioServer.get_bus_effect(0,0) is AudioEffectHardLimiter,"Master limiter protects overlapping layers")
+	check(scene.music.stream is AudioStreamOggVorbis and scene.music.stream.loop,"Music uses a looping compressed stream")
+	check(absf(scene.music.stream.get_length()-96.0)<0.1,"Complete music track is present")
+	check(scene.music.playing and scene.music.volume_linear>0,"Music starts at an audible level")
+	var music_id: int=scene.music.get_instance_id()
+	scene.music_volume.value=0
+	check(scene.music.volume_linear==0 and scene.car.engine_audio.volume_linear>0,"Music can be muted independently")
+	scene.music_volume.value=35
 	var profiles: Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://assets/audio/profiles.json"))
 	check(profiles.size()==scene.VEHICLES.SPECS.size(),"Every car has an engine profile")
 	var fingerprints: Array[String]=[]
@@ -94,9 +101,11 @@ func _run() -> void:
 	check(await scene.switch_map(1),"Travel with new audio layers")
 	await frames(140)
 	check(scene.car.engine_audio.playing,"New vehicle engine starts after travel")
+	check(scene.music.get_instance_id()==music_id and scene.music.playing,"Music survives vehicle and map changes")
 	scene._pause(true)
 	await process_frame
 	check(scene.car.engine_audio.stream_paused,"Pause suspends engine playback")
+	check(not scene.music.stream_paused,"Menu keeps background music playing")
 	scene._pause(false)
 	await process_frame
 	check(not scene.car.engine_audio.stream_paused,"Resume restores playback")

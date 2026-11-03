@@ -2,9 +2,6 @@ extends RigidBody3D
 
 const VEHICLES := preload("res://vehicles.gd")
 const WHEEL := preload("res://assets/models/scout_wheel.tscn")
-const ENGINE := preload("res://assets/audio/engine.wav")
-const GRAVEL := preload("res://assets/audio/gravel.wav")
-const WATER := preload("res://assets/audio/water.wav")
 const IMPACT := preload("res://assets/audio/impact.wav")
 
 var vehicle_index := 0
@@ -26,8 +23,13 @@ var rays: Array[RayCast3D] = []
 var wheels: Array[Node3D] = []
 var wheel_spin := 0.0
 var engine_audio: AudioStreamPlayer
-var gravel_audio: AudioStreamPlayer
-var water_audio: AudioStreamPlayer
+var engine_load_audio: AudioStreamPlayer
+var surface_audio: Dictionary = {}
+var audio_profile: Dictionary
+var contact_surfaces: Dictionary = {}
+var audio_rpm := 750.0
+var audio_gear := 0
+var shift_time := 0.0
 var impact_audio: AudioStreamPlayer
 var dust: CPUParticles3D
 var spray: CPUParticles3D
@@ -93,9 +95,15 @@ func _ready() -> void:
 		wheel.scale=Vector3.ONE*radius/0.48
 		pivot.add_child(wheel)
 		wheels.append(pivot)
-	engine_audio=_loop(ENGINE,-23)
-	gravel_audio=_loop(GRAVEL,-60)
-	water_audio=_loop(WATER,-60)
+	audio_profile=JSON.parse_string(FileAccess.get_file_as_string("res://assets/audio/profiles.json"))[spec.id]
+	audio_rpm=audio_profile.idle_rpm
+	engine_audio=_loop(load("res://assets/audio/engine_"+spec.id+"_idle.wav"),-20)
+	engine_load_audio=_loop(load("res://assets/audio/engine_"+spec.id+"_load.wav"),-80)
+	for kind in VEHICLES.SURFACES:
+		var player:=_loop(load("res://assets/audio/tire_"+kind+".wav"),-80)
+		player.stop()
+		player.volume_linear=0
+		surface_audio[kind]=player
 	impact_audio=AudioStreamPlayer.new()
 	impact_audio.stream=IMPACT
 	add_child(impact_audio)
@@ -123,10 +131,15 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 		reset_physics_interpolation()
 
 func _exit_tree() -> void:
+	stop_audio()
+	for child in get_children():
+		if child is AudioStreamPlayer:
+			child.stream=null
+
+func stop_audio() -> void:
 	for child in get_children():
 		if child is AudioStreamPlayer:
 			child.stop()
-			child.stream=null
 
 func _physics_process(delta: float) -> void:
 	var throttle := Input.get_axis("reverse","accelerate")
@@ -136,6 +149,7 @@ func _physics_process(delta: float) -> void:
 	var right := global_basis.x
 	var speed := linear_velocity.dot(forward)
 	grounded_wheels=0
+	contact_surfaces.clear()
 	var handling := Vector3.ZERO
 	for i in rays.size():
 		var ray := rays[i]
@@ -147,6 +161,7 @@ func _physics_process(delta: float) -> void:
 				grounded_wheels+=1
 				var surface: String=world.surface_at(ray.get_collision_point()+Vector3.UP*0.05) if is_instance_valid(world) else "dirt"
 				handling+=VEHICLES.SURFACES.get(surface,VEHICLES.SURFACES.dirt)
+				contact_surfaces[surface]=contact_surfaces.get(surface,0)+1
 				var normal := ray.get_collision_normal()
 				var offset := ray.global_position-global_position
 				var point_velocity := linear_velocity+angular_velocity.cross(offset)
@@ -173,11 +188,7 @@ func _physics_process(delta: float) -> void:
 	steering_wheel.rotation.z=lerp_angle(steering_wheel.rotation.z,-steering*1.5,delta*9)
 	_update_dashboard(absf(speed)*3.6)
 	wheel_spin+=speed*delta/radius
-	var speed_ratio := clampf(absf(speed)/24,0,1)
-	engine_audio.pitch_scale=lerpf(engine_audio.pitch_scale,0.72+speed_ratio*1.25+absf(throttle)*0.16,delta*4)
-	engine_audio.volume_db=lerpf(-25,-15,maxf(speed_ratio,absf(throttle)*0.45))
-	gravel_audio.volume_db=lerpf(gravel_audio.volume_db,-25+speed_ratio*9 if grounded_wheels>0 and absf(speed)>1 and surface_kind in ["dirt","sand","grass","forest","rock","gobi","snow"] else -65,delta*5)
-	water_audio.volume_db=lerpf(water_audio.volume_db,-20+speed_ratio*6 if grounded_wheels>0 and absf(speed)>1 and surface_kind in ["water","mud","swamp"] else -65,delta*5)
+	_update_audio(delta,throttle,speed)
 	dust.emitting=grounded_wheels>0 and absf(speed)>2 and surface_kind in ["dirt","sand","grass","forest","rock","gobi","snow"]
 	var dust_color := Color("e1e9e7") if surface_kind=="snow" else Color("b9a381")
 	dust.color_ramp.set_color(0,Color(dust_color,0.55))
@@ -198,6 +209,13 @@ func reset_to_start(at: Vector3 = start_position) -> void:
 	pending_reset=true
 	sleeping=false
 	previous_velocity=Vector3.ZERO
+	audio_gear=0
+	audio_rpm=audio_profile.idle_rpm
+	shift_time=0
+	contact_surfaces.clear()
+	for player in surface_audio.values():
+		player.volume_linear=0
+		player.stop()
 	marks.clear()
 	trail.clear_surfaces()
 	dust.restart()
@@ -205,6 +223,53 @@ func reset_to_start(at: Vector3 = start_position) -> void:
 	spray.restart()
 	spray.emitting=false
 	last_mark=at
+
+func _update_audio(delta: float, throttle: float, forward_speed: float) -> void:
+	var blend:=1-exp(-delta*7)
+	var idle: float=audio_profile.idle_rpm
+	var redline: float=audio_profile.redline
+	var gears: Array=audio_profile.gears
+	var reverse:=forward_speed < -0.5 or throttle < 0
+	var wheel_rpm:=absf(forward_speed)/radius*60/TAU
+	var final_drive:=4.1*(2.6 if low_range else 1.0)
+	var coupled: float=wheel_rpm*float(gears[audio_gear])*final_drive
+	shift_time=maxf(0,shift_time-delta)
+	# shortcut: sound-only transmission; replace with drivetrain RPM when mechanical gears exist.
+	if not reverse and shift_time==0:
+		if coupled>redline*0.80 and audio_gear<gears.size()-1:
+			audio_gear+=1
+			shift_time=0.28
+		elif coupled<redline*0.30 and audio_gear>0:
+			audio_gear-=1
+			shift_time=0.28
+	coupled=wheel_rpm*float(gears[0] if reverse else gears[audio_gear])*final_drive
+	var target:=maxf(idle+absf(throttle)*(redline-idle)*0.22,coupled)
+	if grounded_wheels==0:
+		target=lerpf(idle,redline*0.85,absf(throttle))
+	audio_rpm=lerpf(audio_rpm,clampf(target,idle,redline),blend)
+	var rev:=clampf((audio_rpm-idle)/(redline-idle),0,1)
+	var load_gain:=lerpf(0.28,1.0,absf(throttle))*(0.48 if shift_time>0.12 else 1.0)
+	engine_audio.pitch_scale=clampf(audio_rpm/idle,0.8,4.0)
+	engine_load_audio.pitch_scale=clampf(audio_rpm/float(audio_profile.run_rpm),0.2,3.0)
+	var run_mix:=smoothstep(0.04,0.32,rev)
+	engine_audio.volume_linear=lerpf(engine_audio.volume_linear,0.20*(1-run_mix),blend)
+	engine_load_audio.volume_linear=lerpf(engine_load_audio.volume_linear,0.48*run_mix*load_gain,blend)
+	var road_speed:=Vector2(linear_velocity.x,linear_velocity.z).length()
+	var moving:=smoothstep(0.12,1.5,road_speed)
+	var rolling:=moving*lerpf(0.20,0.85,clampf(road_speed/24,0,1))
+	var weight:=clampf(pow(mass/1800.0,0.18),0.85,1.25)
+	var slip:=clampf(absf(linear_velocity.dot(global_basis.x))/8,0,0.5)
+	for kind in surface_audio:
+		var player: AudioStreamPlayer=surface_audio[kind]
+		var share:=float(contact_surfaces.get(kind,0))/rays.size()
+		var gain:=rolling*share*weight*(1+slip)
+		player.pitch_scale=clampf((0.70+road_speed*0.025)*sqrt(0.53/radius),0.6,1.65)
+		player.volume_linear=lerpf(player.volume_linear,gain,blend)
+		if gain>0.0001 and not player.playing:
+			player.play()
+		elif gain==0 and player.volume_linear<0.0001:
+			player.stop()
+			player.volume_linear=0
 
 func _loop(stream: AudioStreamWAV, db: float) -> AudioStreamPlayer:
 	var player := AudioStreamPlayer.new()

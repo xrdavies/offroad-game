@@ -56,7 +56,7 @@
 - 31 个独立模型场景；六种破损废车、四类废料、车身、轮胎、设施和护栏都有可重建的源代码。
 - 成片荒草、下垂棕榈叶、层状岩壁、可驾驶垃圾山、磨损路面和曲折浅滩；暖光、偏紫阴影与更近的跟随视角。
 - 四轮或六轮射线悬挂、前进/倒车、抓地力和手刹、涉水阻力、尘土、水花、限量轮迹。
-- 引擎、砂石胎噪、涉水、风声、碰撞、发现提示共 6 个原创声音文件。
+- 十车型各两层引擎声、十二种地形行驶声，以及风声、碰撞和发现提示，共 35 个当前使用的原创声音文件。
 - 五种驾驶镜头、独立跟拍录像、地点发现、地图、暂停和总音量控制。探索记录当前只保留在本次运行中。
 
 素材来源与编辑方式见 [素材清单](docs/ASSETS.md)；参考视频拆解、地图推定范围见 [参考说明](docs/REFERENCE.md)；发布差距和实测记录见 [验收记录](docs/ACCEPTANCE.md)。视频中的塔防、升级系统和完整配乐范围仍待用户确认。
@@ -78,10 +78,13 @@ godot --headless --path . --editor --import --quit
 godot --headless --path . --script tests/smoke.gd
 godot --headless --path . --script tests/expedition.gd
 godot --headless --path . --script tests/maps.gd
+godot --headless --path . --script tests/audio.gd
 godot --path . --script tests/capture.gd -- /tmp/off-road-rider-service.png
 ```
 
 冒烟测试验证接地、静止稳定、加速、转向、制动、重置、空中动力限制、涉水、暂停、双桥通行和垃圾山碰撞，并检查场景实例的空间分区。去掉 `--headless` 运行同一测试，还会验证渲染器中的实例变换与颜色（Godot 无界面渲染器不保存这两项）。检查输出中的 `SMOKE: PASS`，也要检查 `SCRIPT ERROR` / `ERROR`，不能只看退出码。
+
+驾驶声音使用十车独立引擎和十二种地形循环，参考版本与合成方式见 [音效设计](docs/DRIVING_AUDIO.md)。`tests/audio.gd` 检查声音状态及生命周期；`godot --path . --script tests/capture_driving_audio.gd` 会实际开车并把十车混音 WAV 写到 `build/audio-review/`，需要可用音频输出，不录视频或麦克风。
 
 ```sh
 sh tools/build_recorder.sh  # macOS + Xcode Command Line Tools

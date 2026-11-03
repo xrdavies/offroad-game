@@ -364,8 +364,7 @@ func switch_map(index: int) -> bool:
 	# Draw the loading message before generating the new terrain on the main thread.
 	await get_tree().process_frame
 	await get_tree().process_frame
-	for player in [car.engine_audio,car.gravel_audio,car.water_audio,car.impact_audio]:
-		player.stop()
+	car.stop_audio()
 	await get_tree().create_timer(0.15,true).timeout
 	car.free()
 	world.free()
@@ -425,7 +424,8 @@ func _quit() -> void:
 		recorder.stop_recording()
 	while recorder.finishing:
 		await get_tree().process_frame
-	for player in [car.engine_audio,car.gravel_audio,car.water_audio,car.impact_audio,wind,chime]:
+	car.stop_audio()
+	for player in [wind,chime]:
 		player.stop()
 	# Let the audio thread release its active playback before closing the window.
 	await get_tree().create_timer(0.15,true).timeout

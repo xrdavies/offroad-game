@@ -72,3 +72,8 @@ for i in range(len(impact)):
     impact[i] = (impact[i]*0.6+math.sin(math.tau*72*t)*0.35)*math.exp(-t*14)*min(1,t*700)
 save('impact',impact)
 save('discovery', ((math.sin(math.tau*523.25*i/RATE)+math.sin(math.tau*783.99*i/RATE)*0.35)*0.17*math.exp(-i/RATE*4)*min(1,i/600) for i in range(RATE)))
+
+# Keep the established rebuild command responsible for all current audio assets.
+if __name__ == "__main__":
+    import runpy
+    runpy.run_path(str(Path(__file__).with_name("build_driving_audio.py")), run_name="__main__")

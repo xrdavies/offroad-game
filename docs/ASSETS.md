@@ -29,14 +29,15 @@
 
 | 文件（`assets/audio/`） | 长度 | 行为 |
 | --- | --- | --- |
-| `engine.wav` | 3 秒 | 随油门和速度调整音高、音量 |
-| `gravel.wav` | 4 秒 | 砂石地面行驶时混入 |
-| `water.wav` | 4 秒 | 浅水行驶时混入 |
+| `engine_<车型>_idle.wav` / `engine_<车型>_load.wav` | 每条 6 秒，共 20 条 | 各车型独立怠速/负载层，油门、声效转速与挡位响应 |
+| `tire_<地形>.wav` | 每条 8 秒，共 12 条 | 每轮接地点混合，道路/土/草/森林/岩石/沙/泥/沼泽/水/戈壁/雪/冰 |
 | `wind.wav` | 8 秒 | 低音量环境风声 |
 | `impact.wav` | 0.48 秒 | 有实际碰撞和速度突变时触发 |
 | `discovery.wav` | 1 秒 | 第一次发现地点时触发 |
 
 均为 44.1 kHz / 16-bit / 单声道 WAV；使用项目内确定性合成程序生成，循环带交叉衔接、去直流偏移与峰值校验。Godot 通过标准导入资源加载。这里没有完整配乐，也没有声称已完成专业听音和混音验收。
+
+车型选型、地形声音设计、重建方法、验证与限制见 [驾驶音效说明](DRIVING_AUDIO.md)。旧通用 `engine.wav/gravel.wav/water.wav` 仍保留，当前游戏已不用；新资源由 `tools/build_driving_audio.py` 和 `assets/audio/profiles.json` 生成，并纳入原有 `tools/build_audio.py` 重建命令。
 
 `.uid` 与 `.import` 是需要提交的资源标识和导入设置；`.godot/` 是可重建的导入缓存。所有当前游戏引用的资源都在仓库内，构建不依赖 `/tmp` 或在线生成服务。
 

@@ -92,3 +92,11 @@ DMG 大小：79,695,947 字节。SHA256：`c95ca74f7834efb3f43687cda3955f6be217b
 - 新 demo：`/Users/m4002/mob-files/OffRoadRider-Demos/OffRoadRider-Demo-2026-11-03-v5.mp4`，1280×720、H.264/AAC、约 89.84 秒；`tests/check_recording.py` 完整解码和音视频时长检查通过。SHA-256：`7365c90716c2eb089f0c9adf1d1b99391842f718417b6748a70851daab15f652`。
 
 截图和 demo 用于模型确认，仍属于项目内原创卡通几何资产，不是厂商实车 CAD 或一比一内饰复刻。模型与驾驶舱细节已按参考资料进行分型，实际商业发布仍需要专门的美术验收和各车型授权审查。
+
+## 驾驶舱逐车纠错（2026-11-03，当前修订）
+
+扩大到每车四个第一人称视角后，发现此前截图验收漏掉了方向盘断辐、仪表遮挡、中控重叠、EQ246 面板穿过轮圈等问题。已重建十车仪表台与方向盘关系，按实车照片修正六台参考车的控制台、换挡杆、座椅和门内饰；本节取代前文关于驾驶舱无主要穿模的笼统结论。
+
+资源导入、`tests/cockpit_clearance.gd`、`tests/cockpit.gd`、`tests/smoke.gd` 均通过；实际 Metal / Forward+ 捕获并查看了十车四视角共 40 张修改后截图。新增检测覆盖采样轮圈净空、驾驶位速度读数遮挡和重复实时仪表节点；不表示任意视线和全连续转向的完整几何证明。未改变地图或车辆动力学，本轮不重复声明地图测试结果。
+
+[逐车问题、参考来源与验证边界](COCKPIT_REVIEW.md)，[驾驶位对照](previews/cockpit-refined-forward.jpg)、[中控对照](previews/cockpit-refined-console.jpg)。12 张驾驶舱对比 JPG 已放入 `/Users/m4002/mob-files/OffRoadRider-Demos/Cockpit-Review-2026-11-03/`。EQ246 使用同系列实车内饰近似参考，尚无指定批次完整资料。本轮未生成新视频或安装包。

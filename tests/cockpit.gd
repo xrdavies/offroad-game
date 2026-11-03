@@ -33,7 +33,10 @@ func _run() -> void:
 		scene.car.reset_yaw = 0.8
 		await frames(90)
 		var car: RigidBody3D = scene.car
-		for sample in [[0.0,135.0,"000"],[70.0,0.0,"070"],[140.0,-135.0,"140"],[200.0,-135.0,"200"]]:
+		var samples: Array=[[0.0,135.0,"000"],[70.0,0.0,"070"],[140.0,-135.0,"140"],[200.0,-135.0,"200"]]
+		if car.spec.id=="wc62":
+			samples=[[0.0,135.0,"000"],[48.28032,0.0,"030"],[96.56064,-135.0,"060"],[112.65408,-135.0,"070"]]
+		for sample in samples:
 			car._update_dashboard(sample[0])
 			check(is_equal_approx(car.speed_needle.rotation.z,deg_to_rad(sample[1])),"Calibrated speed needle: "+car.spec.id)
 			check(car.speed_readout.text == sample[2],"Readable live speed: "+car.spec.id)

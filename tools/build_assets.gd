@@ -126,7 +126,8 @@ func _rounded_box(pos: Vector3, size: Vector3, radius: float, color: Color, rot 
 					surface.set_color(color.srgb_to_linear())
 					surface.add_vertex(pos+basis*(center+n*radius))
 
-func _ring(pos: Vector3, radius: float, tube: float, color: Color) -> void:
+func _ring(pos: Vector3, radius: float, tube: float, color: Color, rot := Vector3.ZERO) -> void:
+	var ring_basis:=Basis.from_euler(rot)
 	for i in 64:
 		for j in 8:
 			for corner in [Vector2i(i,j), Vector2i(i+1,j), Vector2i(i+1,j+1), Vector2i(i,j), Vector2i(i+1,j+1), Vector2i(i,j+1)]:
@@ -134,9 +135,9 @@ func _ring(pos: Vector3, radius: float, tube: float, color: Color) -> void:
 				var b: float = TAU*corner.y/8.0
 				var radial := Vector3(sin(a),cos(a),0)
 				var n := radial*cos(b)+Vector3.BACK*sin(b)
-				surface.set_normal(n)
+				surface.set_normal(ring_basis*n)
 				surface.set_color(color.srgb_to_linear())
-				surface.add_vertex(pos+radial*radius+n*tube)
+				surface.add_vertex(pos+ring_basis*(radial*radius+n*tube))
 
 func _label(pos: Vector3, caption: String, height: float, color := Color("d6d5bd")) -> Label3D:
 	var label := Label3D.new()
@@ -168,93 +169,62 @@ func _needle(pos: Vector3, radius: float, node_name: String) -> void:
 	pivot.add_child(visual)
 	visual.owner = root_asset
 
-func _gauge(pos: Vector3, radius: float, speedometer: bool) -> void:
+func _gauge(pos: Vector3, radius: float, speedometer: bool, mph := false) -> void:
 	_cylinder(pos, radius+0.009, 0.026, Color("192823"), 48, Vector3(PI/2,0,0))
 	_ring(pos+Vector3(0,0,0.017), radius, 0.006, Color("9bada2"))
 	var face := pos+Vector3(0,0,0.016)
-	for i in (29 if speedometer else 32):
-		var a := deg_to_rad(-135+i*270.0/28) if speedometer else i*TAU/32
-		var major := i%4 == 0
+	var ticks: int=30 if mph else 28
+	for i in (ticks+1 if speedometer else 32):
+		var a := deg_to_rad(-135+i*270.0/ticks) if speedometer else i*TAU/32
+		var major: bool=i%(5 if mph else 4)==0
 		var direction := Vector3(sin(a),cos(a),0)
 		_box(face+direction*radius*0.83, Vector3(0.002,0.012 if major else 0.005,0.002), Color("d6d5bd"), Vector3(0,0,-a))
 		if major:
-			var caption: String = str(i*5) if speedometer else ["N","E","S","W"][i/8] if i%8 == 0 else ""
-			_label(face+direction*radius*0.62+Vector3(0,0,0.003), caption, 0.014)
-	_label(face+Vector3(0,-radius*0.32,0.003), "KM/H" if speedometer else "HEADING", 0.009)
+			var caption: String = str(i*2 if mph else i*5) if speedometer else ["N","E","S","W"][i/8] if i%8 == 0 else ""
+			_label(face+direction*radius*0.62+Vector3(0,0,0.003), caption, radius*0.17)
+	_label(face+Vector3(0,-radius*0.32,0.003), ("MPH" if mph else "KM/H") if speedometer else "HEADING", radius*0.11)
 	_needle(face+Vector3(0,0,0.008), radius*0.78, "SpeedNeedle" if speedometer else "HeadingNeedle")
 	_cylinder(face+Vector3(0,0,0.012), 0.009, 0.01, Color("a1afa3"), 24, Vector3(PI/2,0,0))
+	if mph:
+		root_asset.get_node("SpeedNeedle").set_meta("maximum_kmh",60.0*1.609344)
 
 func _steering(spec: Dictionary) -> void:
-	var seat: Vector3=spec.seat
 	var body_surface := surface
-	surface = SurfaceTool.new()
+	surface=SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var radius: float=0.205
-	var rim:=Color("263730")
-	var accent:=Color("a69d7a")
-	if spec.id=="unimog" or spec.id=="eq246":
-		radius=0.235
-		rim=Color("354039")
-		accent=Color("c1b68c")
-	elif spec.id=="f150":
-		radius=0.225
-		rim=Color("202c30")
-		accent=Color("c67b4e")
-	elif spec.id=="hilux" or spec.id=="wc62":
-		radius=0.19
-		rim=Color("202a27")
-		accent=Color("a3a78d")
-	_ring(Vector3.ZERO,radius,0.022,rim)
-	_ring(Vector3(0,0,0.014),radius,0.003,accent)
-	match spec.id:
-		"wrangler":
-			# Three thick spokes and a body-colour horn pad evoke the open-air JL cab.
-			for angle in [-0.34,0.34]:
-				_rounded_box(Vector3(sin(angle)*radius*0.52,cos(angle)*radius*0.52,0.008),Vector3(0.19,0.045,0.028),0.01,Color("8d9b8c"),Vector3(0,0,angle))
-			_rounded_box(Vector3(0,-radius*0.52,0.008),Vector3(0.045,0.19,0.028),0.01,Color("8d9b8c"))
-			_rounded_box(Vector3(0,-0.005,0.034),Vector3(0.15,0.10,0.05),0.025,Color(spec.color))
-			_box(Vector3(0,0.004,0.064),Vector3(0.035,0.02,0.008),Color("2d3c32"))
-		"unimog":
-			# Large four-spoke industrial wheel with a broad rectangular hub.
-			for angle in [-0.72,0.72]:
-				_rounded_box(Vector3(sin(angle)*radius*0.48,cos(angle)*radius*0.48,0.008),Vector3(0.24,0.05,0.03),0.012,Color("8d988b"),Vector3(0,0,angle))
-			_rounded_box(Vector3(0,-radius*0.48,0.008),Vector3(0.05,0.22,0.03),0.012,Color("8d988b"))
-			_rounded_box(Vector3(0,radius*0.48,0.008),Vector3(0.05,0.22,0.03),0.012,Color("8d988b"))
-			_rounded_box(Vector3(0,0,0.04),Vector3(0.17,0.12,0.055),0.025,Color("303c37"))
-		"f150":
-			# Thick three-spoke performance wheel with a squared lower rim.
-			for angle in [-0.38,0.38]:
-				_rounded_box(Vector3(sin(angle)*radius*0.55,cos(angle)*radius*0.55,0.008),Vector3(0.22,0.05,0.03),0.012,Color("bac0b4"),Vector3(0,0,angle))
-			_rounded_box(Vector3(0,-radius*0.50,0.008),Vector3(0.05,0.20,0.03),0.012,Color("bac0b4"))
-			_rounded_box(Vector3(0,-radius*0.88,0.008),Vector3(0.23,0.038,0.03),0.012,rim)
-			_rounded_box(Vector3(0,0,0.04),Vector3(0.17,0.11,0.05),0.022,Color("34434a"))
-		"hilux":
-			# Slim three-spoke utility wheel and a small silver centre pad.
-			for angle in [-0.42,0.42]:
-				_beam(Vector3(0,0,0.01),Vector3(sin(angle)*radius*0.70,cos(angle)*radius*0.70,0.01),0.028,Color("a8b0a1"))
-			_beam(Vector3(0,0,0.01),Vector3(0,-radius*0.70,0.01),0.028,Color("a8b0a1"))
-			_rounded_box(Vector3(0,0,0.038),Vector3(0.13,0.09,0.04),0.022,Color("59665e"))
-		"eq246":
-			# Large four-spoke military wheel, with a visible plain steel hub.
-			for angle in [-0.58,0.58]:
-				_beam(Vector3(0,0,0.01),Vector3(sin(angle)*radius*0.72,cos(angle)*radius*0.72,0.01),0.039,Color("a9ad91"))
-			_beam(Vector3(0,0,0.01),Vector3(0,-radius*0.72,0.01),0.039,Color("a9ad91"))
-			_beam(Vector3(0,0,0.01),Vector3(0,radius*0.72,0.01),0.039,Color("a9ad91"))
-			_rounded_box(Vector3(0,0,0.04),Vector3(0.19,0.13,0.05),0.025,Color("68734f"))
-		"wc62":
-			# Thin vintage three-spoke wheel suited to the open military cab.
-			for angle in [-0.45,0.45]:
-				_beam(Vector3(0,0,0.01),Vector3(sin(angle)*radius*0.72,cos(angle)*radius*0.72,0.01),0.022,Color("9d9a7a"))
-			_beam(Vector3(0,0,0.01),Vector3(0,-radius*0.72,0.01),0.022,Color("9d9a7a"))
-			_rounded_box(Vector3(0,0,0.038),Vector3(0.12,0.08,0.038),0.018,Color("6f694f"))
-	# Original cars keep the shared expedition wheel with a neutral centre.
-	if spec.id in ["scout","ridge","pickup","hauler"]:
-		_rounded_box(Vector3(0,0,0.035),Vector3(0.13,0.09,0.044),0.025,Color("3d4b40"))
-	for i in 40:
-		var a := i*TAU/40
-		_box(Vector3(sin(a)*radius,cos(a)*radius,0.023),Vector3(0.004,0.008,0.002),Color("8c967f"),Vector3(0,0,-a))
-	_mesh_node("SteeringWheel", seat+Vector3(0,-0.34,-0.64))
-	surface = body_surface
+	var vintage: bool=spec.id=="wc62"
+	var truck: bool=spec.id in ["unimog","eq246","hauler"]
+	var radius: float=0.22 if vintage else 0.215 if truck else 0.185
+	var rim := Color("383b3a")
+	_ring(Vector3.ZERO,radius,0.012 if vintage else 0.022,rim)
+	var angles: Array=[-90,90,180]
+	if vintage:
+		angles=[-90,30,150]
+	elif spec.id=="unimog":
+		angles=[-70,70,-145,145]
+	elif spec.id=="eq246":
+		angles=[-90,90]
+	for degrees in angles:
+		var a: float=deg_to_rad(degrees)
+		var end:=Vector3(sin(a),cos(a),0)*radius
+		_beam(Vector3(0,0,0.005),end,0.014 if vintage else 0.042 if truck else 0.035,rim)
+		if not vintage:
+			_beam(end*0.40+Vector3(0,0,0.024),end*0.90+Vector3(0,0,0.024),0.012,Color("8b8c88"))
+	if vintage:
+		_cylinder(Vector3(0,0,0.015),0.042,0.028,Color("636a46"),32,Vector3(PI/2,0,0))
+	else:
+		_rounded_box(Vector3(0,-0.007,0.026),Vector3(0.17 if truck else 0.14,0.09,0.052),0.032,rim)
+		if spec.id in ["wrangler","unimog","f150","hilux"]:
+			for side in [-1,1]:
+				for row in 2:
+					_rounded_box(Vector3(side*0.115,0.006-row*0.023,0.03),Vector3(0.028,0.016,0.01),0.004,Color("626665"))
+	if spec.id=="f150":
+		_rounded_box(Vector3(0,radius,0.018),Vector3(0.028,0.042,0.024),0.006,Color("be6c37"))
+		for side in [-1,1]:
+			_rounded_box(Vector3(side*0.135,0.04,-0.045),Vector3(0.028,0.12,0.025),0.008,Color("9da1a2"))
+	var wheel:=_mesh_node("SteeringWheel",spec.seat+Vector3(0,-0.39,-0.64))
+	wheel.rotation.x=-0.20 if not vintage else -0.32
+	surface=body_surface
 
 func _triangle(a: Vector3, b: Vector3, c: Vector3, color: Color) -> void:
 	var normal := (c - a).cross(b - a).normalized()
@@ -564,8 +534,8 @@ func _relay() -> void:
 func _cockpit(spec: Dictionary, cabin_front: float) -> void:
 	var seat: Vector3 = spec.seat
 	var w: float = spec.width
-	var trim := Color(spec.color).darkened(0.28)
-	var charcoal := Color("36453d")
+	var trim := Color("62684b") if spec.id in ["wc62","eq246"] else Color("45494b")
+	var charcoal := Color("414344")
 	var leather := Color("817859")
 	if spec.id=="wrangler":
 		leather=Color("6f4f3d")
@@ -579,192 +549,239 @@ func _cockpit(spec: Dictionary, cabin_front: float) -> void:
 		leather=Color("707b54")
 	elif spec.id=="wc62":
 		leather=Color("6b6048")
-	var face_z := seat.z-0.84
 	# Close the footwell at seat-relative height, including the taller truck cab.
 	_box(Vector3(0,seat.y-0.88,seat.z-0.04),Vector3(w*0.97,0.10,1.96),charcoal)
 	_box(Vector3(0,seat.y-0.69,cabin_front+0.04),Vector3(w*0.97,0.58,0.08),trim)
 	for x in [-w*0.23,w*0.23]:
-		_rounded_box(Vector3(x,seat.y-0.821,seat.z-0.44),Vector3(w*0.34,0.018,0.70),0.008,Color("293c30"))
+		_rounded_box(Vector3(x,seat.y-0.821,seat.z-0.44),Vector3(w*0.34,0.018,0.70),0.008,Color("303638"))
 		for i in 9:
-			_box(Vector3(x+(i-4)*0.045,seat.y-0.809,seat.z-0.44),Vector3(0.008,0.004,0.60),Color("425344"))
-	for x in [seat.x-0.08,seat.x+0.08]:
+			_box(Vector3(x+(i-4)*0.045,seat.y-0.809,seat.z-0.44),Vector3(0.008,0.004,0.60),Color("4a5051"))
+	var pedal_offsets: Array=[-0.08,0.09] if spec.id in ["f150","wrangler"] else [-0.14,0.0,0.14]
+	for offset in pedal_offsets:
+		var x: float=seat.x+offset
 		_beam(Vector3(x,seat.y-0.55,cabin_front+0.08),Vector3(x,seat.y-0.78,seat.z-0.70),0.013,Color("81907c"))
 		_rounded_box(Vector3(x,seat.y-0.78,seat.z-0.69),Vector3(0.07,0.10,0.025),0.012,charcoal,Vector3(-0.3,0,0))
 		for row in 4:
 			_box(Vector3(x,seat.y-0.81+row*0.02,seat.z-0.671-row*0.006),Vector3(0.051,0.004,0.004),Color("a1ac92"))
-	# Rounded padded top, painted fascia and an inset instrument binnacle.
-	_rounded_box(Vector3(0,seat.y-0.39,face_z-0.065),Vector3(w*0.94,0.34,0.23),0.045,trim)
-	_rounded_box(Vector3(0,seat.y-0.215,face_z-0.05),Vector3(w*0.96,0.075,0.32),0.032,charcoal)
-	_rounded_box(Vector3(seat.x,seat.y-0.32,face_z+0.055),Vector3(0.51,0.245,0.075),0.045,Color("263a30"))
-	_rounded_box(Vector3(seat.x,seat.y-0.322,face_z+0.096),Vector3(0.47,0.208,0.018),0.025,Color("182b23"))
-	_gauge(Vector3(seat.x-0.112,seat.y-0.31,face_z+0.109),0.083,true)
-	_gauge(Vector3(seat.x+0.112,seat.y-0.31,face_z+0.109),0.083,false)
-	var readout := _label(Vector3(seat.x-0.112,seat.y-0.35,face_z+0.131),"000",0.016,Color("d1dba9"))
-	readout.name = "SpeedReadout"
-	# Vent housings have recessed openings, individual louvers and adjusters.
-	for x in [-w*0.41,0.02,w*0.41]:
-		var p := Vector3(x,seat.y-0.31,face_z+0.065)
-		_rounded_box(p,Vector3(0.15,0.11,0.04),0.016,Color("8b9a86"))
-		_rounded_box(p+Vector3(0,0,0.023),Vector3(0.128,0.086,0.013),0.01,Color("1c2b24"))
-		for j in 5:
-			_box(p+Vector3(0,(j-2)*0.014,0.033),Vector3(0.116,0.005,0.016),Color("617263"),Vector3(-0.25,0,0))
-		_rounded_box(p+Vector3(0.02,0,0.045),Vector3(0.016,0.027,0.012),0.004,Color("c0b998"))
-	# A physical radio and switch bank, rather than a flat placeholder screen.
-	var radio := Vector3(w*0.16,seat.y-0.335,face_z+0.066)
-	_rounded_box(radio,Vector3(0.31,0.145,0.046),0.014,charcoal)
-	_rounded_box(radio+Vector3(0,0.025,0.027),Vector3(0.19,0.055,0.008),0.006,Color("203c33"))
-	_label(radio+Vector3(0,0.025,0.035),"OFF ROAD RIDER",0.015,Color("bacb9b"))
-	for x in [-0.127,0.127]:
-		_cylinder(radio+Vector3(x,0.018,0.032),0.018,0.025,Color("9daa96"),32,Vector3(PI/2,0,0))
-		_box(radio+Vector3(x,0.025,0.047),Vector3(0.002,0.012,0.002),charcoal)
-	for i in 5:
-		var p := radio+Vector3((i-2)*0.052,-0.042,0.03)
-		_rounded_box(p,Vector3(0.04,0.023,0.012),0.004,Color("586a58"))
-		_label(p+Vector3(0,0,0.009),str(i+1),0.01)
-	for i in 4:
-		var p := Vector3(0.06+i*0.066,seat.y-0.465,face_z+0.07)
-		_rounded_box(p,Vector3(0.048,0.052,0.018),0.007,Color("24372e"))
-		_box(p+Vector3(0,0.009,0.012),Vector3(0.025,0.003,0.003),Color("d5ab73") if i==0 else Color("98ab8b"))
-	# Glovebox seam, pull handle and passenger grab rail.
-	_rounded_box(Vector3(w*0.35,seat.y-0.48,face_z+0.059),Vector3(w*0.22,0.14,0.015),0.015,charcoal)
-	_rounded_box(Vector3(w*0.35,seat.y-0.43,face_z+0.076),Vector3(0.08,0.018,0.02),0.006,Color("9ca58a"))
-	for x in [w*0.25,w*0.42]:
-		_rounded_box(Vector3(x,seat.y-0.21,face_z+0.10),Vector3(0.027,0.027,0.10),0.01,charcoal)
-	_rounded_box(Vector3(w*0.335,seat.y-0.21,face_z+0.145),Vector3(w*0.2,0.031,0.036),0.015,Color("a8ad8d"))
-	_label(Vector3(w*0.33,seat.y-0.35,face_z+0.09),spec.name,0.017)
+	_dashboard(spec)
 	# Upholstery, piping and ribbed inserts are sized consistently across all cars.
 	for x in [-w*0.23,w*0.23]:
-		_rounded_box(Vector3(x,seat.y-0.76,seat.z+0.16),Vector3(w*0.35,0.18,0.65),0.065,charcoal)
+		_rounded_box(Vector3(x,seat.y-0.76,seat.z+0.16),Vector3(w*0.30,0.18,0.65),0.065,charcoal)
 		_rounded_box(Vector3(x,seat.y-0.66,seat.z+0.15),Vector3(w*0.26,0.08,0.51),0.035,leather)
-		_rounded_box(Vector3(x,seat.y-0.39,seat.z+0.5),Vector3(w*0.35,0.66,0.18),0.065,charcoal,Vector3(-0.1,0,0))
+		if spec.id=="wc62":
+			_rounded_box(Vector3(x,seat.y-0.49,seat.z+0.43),Vector3(w*0.30,0.35,0.13),0.035,leather)
+			continue
+		_rounded_box(Vector3(x,seat.y-0.39,seat.z+0.5),Vector3(w*0.30,0.66,0.18),0.065,charcoal,Vector3(-0.1,0,0))
 		_rounded_box(Vector3(x,seat.y-0.39,seat.z+0.39),Vector3(w*0.25,0.52,0.065),0.03,leather,Vector3(-0.1,0,0))
 		for row in 6:
 			_box(Vector3(x,seat.y-0.57+row*0.07,seat.z+0.354+(0.18-row*0.07)*0.1),Vector3(w*0.22,0.004,0.004),Color("b8ad83"),Vector3(-0.1,0,0))
 			_box(Vector3(x,seat.y-0.618,seat.z+0.15+(row-2.5)*0.07),Vector3(w*0.22,0.003,0.003),Color("b8ad83"))
 		for side in [-1,1]:
-			_rounded_box(Vector3(x+side*w*0.145,seat.y-0.4,seat.z+0.36),Vector3(0.09,0.54,0.11),0.04,charcoal,Vector3(-0.1,0,0))
+			_rounded_box(Vector3(x+side*w*0.125,seat.y-0.4,seat.z+0.36),Vector3(0.09,0.54,0.11),0.04,charcoal,Vector3(-0.1,0,0))
 			_cylinder(Vector3(x+side*0.085,seat.y-0.015,seat.z+0.49),0.009,0.15,Color("a1ae97"),16)
 		_rounded_box(Vector3(x,seat.y+0.07,seat.z+0.49),Vector3(0.30,0.18,0.12),0.048,leather)
-	# Center tunnel, two shifters and rubber gaiters.
-	_rounded_box(Vector3(0,seat.y-0.76,seat.z-0.18),Vector3(0.22,0.17,0.85),0.04,charcoal)
-	for index in 2:
-		var p := Vector3(-0.045+index*0.10,seat.y-0.62,seat.z-0.31+index*0.12)
-		for ring in 4:
-			_rounded_box(p+Vector3(0,ring*0.015,0),Vector3(0.085-ring*0.012,0.018,0.085-ring*0.012),0.007,Color("293b31"))
-		_cylinder(p+Vector3(0,0.12,0),0.009,0.16,Color("acb3a2"),20)
-		_rounded_box(p+Vector3(0,0.20,0),Vector3(0.049,0.042,0.049),0.02,Color("a39975") if index==0 else charcoal)
+	var vintage: bool=spec.id=="wc62"
+	var automatic: bool=spec.id in ["f150","unimog"]
+	var console_width: float=0.30 if spec.id=="f150" else 0.25 if spec.id=="unimog" else 0.18
+	var console_y: float=seat.y-0.62 if automatic else seat.y-0.78
+	_rounded_box(Vector3(0,console_y,seat.z-0.12),Vector3(console_width,0.18,0.72),0.035,charcoal)
+	if automatic:
+		for x in [-0.064,0.064]:
+			_cylinder(Vector3(x,console_y+0.097,seat.z+0.07),0.043,0.008,Color("1f2425"),32)
+			_ring(Vector3(x,console_y+0.105,seat.z+0.07),0.044,0.006,Color("717877"),Vector3(PI/2,0,0))
+		_rounded_box(Vector3(0,console_y+0.11,seat.z+0.19),Vector3(console_width-0.025,0.05,0.13),0.02,leather)
+	if spec.id!="unimog":
+		for index in (1 if spec.id in ["f150","hilux"] else 2):
+			var p:=Vector3(-0.035+index*0.09,console_y+0.10,seat.z-0.30+index*0.13)
+			for ring in 4:
+				_rounded_box(p+Vector3(0,ring*0.012,0),Vector3(0.07-ring*0.01,0.014,0.07-ring*0.01),0.005,charcoal)
+			var lever_height: float=0.10 if spec.id=="f150" else 0.20
+			_beam(p+Vector3(0,0.03,0),p+Vector3(0,lever_height-0.01,-0.025),0.025 if spec.id=="f150" else 0.012,Color("727778"))
+			_rounded_box(p+Vector3(0,lever_height,-0.025),Vector3(0.065,0.045,0.055),0.020,charcoal)
+	else:
+		# U5023 uses a steering-column selector, not two floor gear levers.
+		_beam(seat+Vector3(0.025,-0.40,-0.81),seat+Vector3(0.22,-0.34,-0.78),0.018,charcoal)
+		_rounded_box(seat+Vector3(0.22,-0.34,-0.78),Vector3(0.07,0.038,0.035),0.012,charcoal)
 	for side in [-1,1]:
-		var x: float = side*(w*0.5-0.065)
-		_rounded_box(Vector3(x,seat.y-0.47,seat.z+0.05),Vector3(0.07,0.48,1.34),0.03,charcoal)
-		_rounded_box(Vector3(x-side*0.035,seat.y-0.42,seat.z),Vector3(0.075,0.22,0.80),0.035,leather)
-		_rounded_box(Vector3(x-side*0.08,seat.y-0.43,seat.z-0.12),Vector3(0.12,0.06,0.40),0.025,charcoal)
-		_rounded_box(Vector3(x-side*0.085,seat.y-0.26,seat.z-0.35),Vector3(0.025,0.035,0.15),0.012,Color("a6b09a"))
+		var x: float=side*(w*0.5-0.065)
+		if vintage:
+			# Exposed metal and canvas door strap; no modern padded door card.
+			_rounded_box(Vector3(x,seat.y-0.63,seat.z+0.05),Vector3(0.035,0.22,1.12),0.012,Color("636a46"))
+			_beam(Vector3(x,seat.y-0.26,seat.z-0.56),Vector3(x,seat.y-0.36,seat.z+0.45),0.028,Color("9b8e65"))
+		else:
+			_rounded_box(Vector3(x,seat.y-0.49,seat.z+0.05),Vector3(0.06,0.43,1.20),0.025,charcoal)
+			_rounded_box(Vector3(x-side*0.033,seat.y-0.47,seat.z),Vector3(0.035,0.20,0.75),0.02,leather)
+			_rounded_box(Vector3(x-side*0.067,seat.y-0.44,seat.z-0.03),Vector3(0.10,0.05,0.36),0.02,charcoal)
+			_rounded_box(Vector3(x-side*0.043,seat.y-0.30,seat.z-0.35),Vector3(0.022,0.027,0.12),0.008,Color("949895"))
 	# Thin wiper blades and rubber windshield seals give the aperture scale.
 	for x in [-w*0.26,w*0.26]:
 		_beam(Vector3(x,seat.y-0.2,cabin_front+0.045),Vector3(x-0.14,seat.y-0.11,cabin_front+0.045),0.013,charcoal)
 		_rounded_box(Vector3(x-0.13,seat.y-0.11,cabin_front+0.052),Vector3(0.34,0.014,0.016),0.006,Color("1e3028"),Vector3(0,0,0.10))
-	_cylinder(seat+Vector3(0,-0.34,-0.81),0.025,0.30,charcoal,24,Vector3(PI/2,0,0))
+	_beam(seat+Vector3(0,-0.62,-0.86),seat+Vector3(0,-0.39,-0.66),0.065,charcoal)
 	_steering(spec)
-	_cockpit_signature(spec,cabin_front)
 
-func _cockpit_signature(spec: Dictionary, cabin_front: float) -> void:
-	# The common instruments keep gameplay readable, while these overlays make
-	# the first-person view follow each reference cab's own visual language.
+func _vent(pos: Vector3, size: Vector2, round_vent := false) -> void:
+	var frame:=Color("929690")
+	var dark:=Color("22272a")
+	if round_vent:
+		_cylinder(pos,size.x/2,0.025,dark,40,Vector3(PI/2,0,0))
+		_ring(pos+Vector3(0,0,0.016),size.x/2,0.007,frame)
+	else:
+		_rounded_box(pos,Vector3(size.x,size.y,0.03),0.013,frame)
+		_rounded_box(pos+Vector3(0,0,0.018),Vector3(size.x-0.018,size.y-0.018,0.012),0.008,dark)
+	for i in 5:
+		var y: float=(i-2)*size.y*0.14
+		var width: float=sqrt(maxf(0.0,pow(size.x/2-0.008,2)-y*y))*2 if round_vent else size.x-0.028
+		_box(pos+Vector3(0,y,0.028),Vector3(width,0.004,0.012),Color("676c6d"))
+
+func _knob(pos: Vector3, radius := 0.024) -> void:
+	_cylinder(pos,radius,0.025,Color("292d2e"),32,Vector3(PI/2,0,0))
+	_ring(pos+Vector3(0,0,0.014),radius-0.003,0.003,Color("9b9c94"))
+	_box(pos+Vector3(0,radius*0.52,0.019),Vector3(0.003,radius*0.40,0.003),Color("dfd6be"))
+
+func _aux_gauge(pos: Vector3, radius: float, caption: String) -> void:
+	_cylinder(pos,radius,0.025,Color("232829"),32,Vector3(PI/2,0,0))
+	_ring(pos+Vector3(0,0,0.015),radius,0.004,Color("898e83"))
+	for i in 9:
+		var a: float=deg_to_rad(-110+i*27.5)
+		_box(pos+Vector3(sin(a)*radius*0.78,cos(a)*radius*0.78,0.018),Vector3(0.002,0.008,0.002),Color("dbd4bd"),Vector3(0,0,-a))
+	_beam(pos+Vector3(0,0,0.02),pos+Vector3(-radius*0.24,radius*0.52,0.02),0.003,Color("d9c7a1"))
+	_label(pos+Vector3(0,-radius*0.40,0.021),caption,radius*0.18)
+
+func _screen(pos: Vector3, size: Vector2, title: String) -> void:
+	_rounded_box(pos,Vector3(size.x+0.04,size.y+0.04,0.045),0.014,Color("242a2f"))
+	_rounded_box(pos+Vector3(0,0,0.028),Vector3(size.x,size.y,0.01),0.006,Color("32494f"))
+	_label(pos+Vector3(0,size.y*0.31,0.036),title,0.014,Color("b9d2cb"))
+	for i in 4:
+		_box(pos+Vector3((i-1.5)*size.x*0.22,-size.y*0.10,0.035),Vector3(size.x*0.15,size.y*0.30,0.002),Color("566e73"))
+
+func _dashboard(spec: Dictionary) -> void:
 	var seat: Vector3=spec.seat
 	var w: float=spec.width
-	var face_z: float=seat.z-0.84
-	var dash_y: float=seat.y-0.40
+	var y: float=seat.y
+	var z: float=seat.z-0.94
+	var dark:=Color("41464a")
+	var face:=Color("686b63")
+	var vintage: bool=spec.id=="wc62"
+	match spec.id:
+		"wrangler": face=Color("943e35")
+		"unimog": face=Color("565c5f")
+		"f150": face=Color("434b53")
+		"hilux": face=Color("565a5d")
+		"eq246": face=Color("59634c")
+		"wc62": face=Color("73784d")
+		"ridge": face=Color("796450")
+		"pickup": face=Color("716459")
+		"hauler": face=Color("626963")
+	# Every fascia has one front surface: switches and gauges sit in front of it.
+	var dash_height: float=0.24 if vintage else 0.32
+	_rounded_box(Vector3(0,y-0.36,z-0.10),Vector3(w*0.94,dash_height,0.20),0.015 if vintage else 0.045,face)
+	if not vintage:
+		_rounded_box(Vector3(0,y-0.205,z-0.12),Vector3(w*0.95,0.055,0.30),0.023,dark)
+		_rounded_box(Vector3(w*0.30,y-0.43,z+0.013),Vector3(w*0.24,0.13,0.016),0.012,face.darkened(0.13))
+		_rounded_box(Vector3(w*0.30,y-0.38,z+0.025),Vector3(0.075,0.016,0.016),0.005,Color("989b95"))
+	var speed_pos:=Vector3(seat.x-0.095,y-0.33,z+0.04)
+	if vintage:
+		speed_pos=Vector3(-0.18,y-0.30,z+0.024)
+	elif spec.id=="eq246":
+		speed_pos=Vector3(seat.x,y-0.33,z+0.045)
+	var readout_pos:=speed_pos+Vector3(0,-0.035,0.025)
+	if spec.id=="f150":
+		# Digital cluster, with the existing live speed needle rendered over the panel.
+		_screen(Vector3(seat.x,y-0.33,z+0.02),Vector2(0.43,0.16),"P   TRAIL")
+		_gauge(speed_pos,0.060,true)
+		readout_pos=Vector3(seat.x+0.06,y-0.33,z+0.057)
+		_label(readout_pos+Vector3(0,-0.027,0),"KM/H",0.010)
+	else:
+		if not vintage:
+			_rounded_box(Vector3(seat.x,y-0.33,z+0.005),Vector3(0.48,0.22,0.055),0.04,dark.darkened(0.2))
+		_gauge(speed_pos,0.077 if not vintage else 0.081,true,vintage)
+		if spec.id not in ["wc62","eq246"]:
+			_aux_gauge(Vector3(seat.x+0.10,y-0.33,z+0.04),0.068,"RPM")
+	var readout:=_label(readout_pos,"000",0.018,Color("d4dec9"))
+	readout.name="SpeedReadout"
+	if vintage: readout.set_meta("unit_scale",1.0/1.609344)
+	# One gameplay compass, kept separate from the historical vehicle instruments.
+	var compass:=Vector3(w*0.34,y-0.125,z-0.06)
+	_rounded_box(compass-Vector3(0,0,0.018),Vector3(0.11,0.10,0.07),0.018,dark)
+	_gauge(compass,0.038,false)
 	match spec.id:
 		"wrangler":
-			# JL cues: body-colour fascia, circular vents and red grab handles.
-			_rounded_box(Vector3(0,dash_y,face_z+0.13),Vector3(w*0.40,0.12,0.026),0.012,Color(spec.color))
-			for x in [-w*0.34,w*0.34]:
-				_cylinder(Vector3(x,dash_y-0.01,face_z+0.15),0.052,0.018,Color("1f2927"),24,Vector3(PI/2,0,0))
-				_cylinder(Vector3(x,dash_y-0.01,face_z+0.164),0.032,0.012,Color("a8ab91"),20,Vector3(PI/2,0,0))
-			for side in [-1,1]:
-				_beam(Vector3(side*w*0.43,seat.y-0.08,seat.z-0.70),Vector3(side*w*0.43,seat.y-0.34,seat.z-0.70),0.035,Color("b55c4e"))
-			_rounded_box(Vector3(0,seat.y-0.56,seat.z-0.25),Vector3(0.16,0.08,0.12),0.025,Color("6f4f3d"))
-			# The Wrangler has a short, upright centre stack rather than a wide
-			# integrated console.  Keep the grab handles and body-colour fascia in
-			# the camera's lower field so the open-air cab reads immediately.
-			_rounded_box(Vector3(w*0.14,seat.y-0.50,face_z+0.18),Vector3(0.23,0.30,0.055),0.018,Color("6f4f3d"))
-			_rounded_box(Vector3(w*0.14,seat.y-0.43,face_z+0.215),Vector3(0.15,0.10,0.018),0.006,Color("263a32"))
-			for i in 3:
-				_rounded_box(Vector3(w*0.14+(i-1)*0.052,seat.y-0.57,face_z+0.19),Vector3(0.034,0.035,0.018),0.006,Color("c6a55f"))
-		"unimog":
-			# U5023 cues: high dark instrument shelf, switch rail and grab bar.
-			_rounded_box(Vector3(0,dash_y+0.05,face_z+0.12),Vector3(w*0.90,0.16,0.08),0.025,Color("454d49"))
-			for i in 7:
-				var p:=Vector3(-w*0.30+i*w*0.10,seat.y-0.30,face_z+0.17)
-				_rounded_box(p,Vector3(0.048,0.04,0.022),0.006,Color("a0a78d") if i%3 else Color("c78855"))
-			_beam(Vector3(w*0.25,seat.y-0.12,face_z+0.17),Vector3(w*0.44,seat.y-0.12,face_z+0.17),0.025,Color("a7aa91"))
-			_rounded_box(Vector3(w*0.30,seat.y-0.43,face_z+0.15),Vector3(0.24,0.10,0.026),0.01,Color("25312e"))
-			# A Unimog's cab sits high over the chassis.  Add the vertical centre
-			# stack and deep transmission tunnel that are visible below the shelf.
-			_rounded_box(Vector3(w*0.18,seat.y-0.53,face_z+0.18),Vector3(0.30,0.43,0.09),0.025,Color("3d4842"))
-			_rounded_box(Vector3(w*0.18,seat.y-0.39,face_z+0.235),Vector3(0.22,0.16,0.018),0.006,Color("182722"))
+			for x in [-w*0.41,-0.245,0.245,w*0.41]:
+				_vent(Vector3(x,y-0.30,z+0.02),Vector2(0.12,0.12),true)
+			_screen(Vector3(0,y-0.285,z+0.035),Vector2(0.28,0.17),"TRAIL / AUDIO")
+			_rounded_box(Vector3(0,y-0.50,z-0.005),Vector3(0.39,0.20,0.13),0.025,dark)
+			for x in [-0.115,0.0,0.115]: _knob(Vector3(x,y-0.46,z+0.075))
 			for i in 4:
-				_box(Vector3(w*0.18+(i-1.5)*0.052,seat.y-0.59,face_z+0.235),Vector3(0.028,0.045,0.016),Color("bda66d"))
-			_rounded_box(Vector3(0,seat.y-0.72,seat.z-0.20),Vector3(0.34,0.20,0.92),0.045,Color("303b35"))
-		"f150":
-			# Raptor cues: broad digital binnacle, centre screen and orange trim.
-			_rounded_box(Vector3(0,dash_y+0.03,face_z+0.135),Vector3(w*0.82,0.18,0.04),0.025,Color("252d2f"))
-			_rounded_box(Vector3(w*0.17,dash_y-0.02,face_z+0.16),Vector3(0.33,0.13,0.03),0.014,Color("253c43"))
-			_rounded_box(Vector3(w*0.17,dash_y-0.02,face_z+0.18),Vector3(0.26,0.06,0.008),0.004,Color("9db3a2"))
-			for x in [-w*0.38,-w*0.27,w*0.30,w*0.40]:
-				_cylinder(Vector3(x,dash_y-0.01,face_z+0.17),0.026,0.018,Color("c98651"),16,Vector3(PI/2,0,0))
-			_rounded_box(Vector3(0,seat.y-0.61,seat.z-0.28),Vector3(0.12,0.13,0.16),0.025,Color("30383a"))
-			# The crew cab uses a broad horizontal dash and a raised centre
-			# console.  These layered planes make the screen and console occupy a
-			# different volume from the narrow utility cabs.
-			_rounded_box(Vector3(w*0.17,dash_y-0.13,face_z+0.21),Vector3(0.46,0.24,0.075),0.022,Color("1f292d"))
-			_rounded_box(Vector3(w*0.17,dash_y-0.11,face_z+0.255),Vector3(0.34,0.14,0.015),0.006,Color("75989a"))
-			_rounded_box(Vector3(w*0.13,seat.y-0.69,seat.z-0.24),Vector3(0.40,0.18,0.92),0.055,Color("252d2f"))
-			for x in [-0.06,0.06]:
-				_cylinder(Vector3(w*0.13+x,seat.y-0.56,seat.z-0.31),0.034,0.018,Color("b07e55"),20,Vector3(PI/2,0,0))
-		"hilux":
-			# Hilux cues: compact dark fascia, amber switch row and manual tunnel.
-			_rounded_box(Vector3(0,dash_y+0.02,face_z+0.125),Vector3(w*0.56,0.16,0.035),0.02,Color("4c5750"))
-			_rounded_box(Vector3(w*0.14,dash_y-0.01,face_z+0.155),Vector3(0.27,0.12,0.028),0.012,Color("243b3a"))
-			for i in 5:
-				_box(Vector3(-w*0.22+i*w*0.11,seat.y-0.29,face_z+0.17),Vector3(0.035,0.026,0.012),Color("c6a35d") if i%2 else Color("9da58c"))
-			_rounded_box(Vector3(0,seat.y-0.62,seat.z-0.30),Vector3(0.10,0.12,0.18),0.025,Color("59615a"))
-			# Hilux keeps a slim, two-tier fascia and a pronounced manual
-			# transmission tunnel.  The narrow centre screen leaves the passenger
-			# side open, unlike the F-150's wide console.
-			_rounded_box(Vector3(w*0.16,dash_y-0.11,face_z+0.18),Vector3(0.28,0.23,0.065),0.018,Color("39443f"))
-			_rounded_box(Vector3(w*0.16,dash_y-0.07,face_z+0.22),Vector3(0.20,0.11,0.014),0.005,Color("8fa39a"))
-			_rounded_box(Vector3(0,seat.y-0.72,seat.z-0.20),Vector3(0.24,0.18,0.82),0.04,Color("3c4640"))
-			_cylinder(Vector3(0,seat.y-0.54,seat.z-0.31),0.045,0.18,Color("9d9e85"),20)
-		"eq246":
-			# EQ246 cues: olive pressed-metal dash and exposed military toggles.
-			_rounded_box(Vector3(0,dash_y+0.05,face_z+0.12),Vector3(w*0.94,0.21,0.06),0.025,Color("596648"))
-			for i in 6:
-				var p:=Vector3(-w*0.27+i*w*0.11,seat.y-0.27,face_z+0.18)
-				_rounded_box(p,Vector3(0.052,0.06,0.026),0.008,Color("c6b678") if i%2 else Color("29392d"))
-			for x in [-0.18,0.0,0.18]:
-				_gauge(Vector3(x,seat.y-0.30,face_z+0.18),0.055,false)
-			_beam(Vector3(w*0.29,seat.y-0.08,face_z+0.17),Vector3(w*0.43,seat.y-0.08,face_z+0.17),0.035,Color("a9ad88"))
-			# The flat-head military cab has a broad pressed-metal ledge, a
-			# separate centre switch box and a long low tunnel between the seats.
-			_rounded_box(Vector3(0,dash_y-0.12,face_z+0.205),Vector3(w*0.92,0.28,0.09),0.028,Color("4d5b42"))
-			_rounded_box(Vector3(w*0.20,seat.y-0.51,face_z+0.23),Vector3(0.30,0.31,0.075),0.018,Color("2b3930"))
-			for i in 5:
-				_box(Vector3(w*0.20+(i-2)*0.052,seat.y-0.42,face_z+0.275),Vector3(0.026,0.042,0.016),Color("c2b271") if i%2 else Color("6f8260"))
-			_rounded_box(Vector3(0,seat.y-0.73,seat.z-0.18),Vector3(0.38,0.20,0.98),0.045,Color("4c5a43"))
-		"wc62":
-			# WC-62 cues: sparse painted steel, three simple gauges and a canvas rail.
-			_rounded_box(Vector3(0,dash_y+0.02,face_z+0.10),Vector3(w*0.88,0.16,0.035),0.015,Color("6a6c4c"))
-			for x in [-0.18,0.0,0.18]:
-				_gauge(Vector3(x,seat.y-0.31,face_z+0.15),0.058,true if x==0 else false)
+				_rounded_box(Vector3((i-1.5)*0.07,y-0.55,z+0.067),Vector3(0.048,0.03,0.022),0.004,dark.lightened(0.12))
+			for x in [w*0.23,w*0.36]:
+				_beam(Vector3(x,y-0.31,z+0.01),Vector3(x,y-0.31,z+0.10),0.032,dark)
+			_beam(Vector3(w*0.23,y-0.31,z+0.10),Vector3(w*0.36,y-0.31,z+0.10),0.035,dark)
 			for side in [-1,1]:
-				_beam(Vector3(side*w*0.43,seat.y+0.02,cabin_front+0.1),Vector3(side*w*0.43,seat.y+0.54,cabin_front+0.1),0.028,Color("343d35"))
-			# Keep the WC-62 low and open: a narrow steel instrument strip,
-			# exposed lower edge and canvas side rails replace the modern centre
-			# stack used by the pickups.
-			_rounded_box(Vector3(0,dash_y-0.11,face_z+0.165),Vector3(w*0.86,0.20,0.055),0.016,Color("5b6044"))
-			_rounded_box(Vector3(-w*0.18,seat.y-0.48,face_z+0.20),Vector3(0.20,0.20,0.048),0.012,Color("4d523c"))
-			_rounded_box(Vector3(0,seat.y-0.72,seat.z-0.16),Vector3(0.18,0.14,0.82),0.028,Color("4c4f3a"))
+				var x: float=side*w*0.46
+				for h in [-0.02,0.20]:
+					_beam(Vector3(x,y+h,seat.z-0.98),Vector3(x,y+h,seat.z-0.89),0.026,dark)
+				_beam(Vector3(x,y-0.02,seat.z-0.89),Vector3(x,y+0.20,seat.z-0.89),0.028,dark)
+		"unimog":
+			_rounded_box(Vector3(0,y-0.38,z+0.005),Vector3(0.48,0.39,0.08),0.03,Color("393f43"))
+			for row in 2:
+				for col in 5:
+					_rounded_box(Vector3((col-2)*0.07,y-0.26-row*0.055,z+0.054),Vector3(0.05,0.035,0.016),0.005,Color("9c5349") if col==2 and row==0 else Color("646e70"))
+			_vent(Vector3(-0.105,y-0.45,z+0.055),Vector2(0.13,0.09))
+			_vent(Vector3(0.105,y-0.45,z+0.055),Vector2(0.13,0.09))
+			for row in 3: _knob(Vector3(-0.29,y-0.29-row*0.085,z+0.04))
+			for x in [-w*0.41,w*0.41]: _vent(Vector3(x,y-0.30,z+0.02),Vector2(0.11,0.17))
+			_rounded_box(Vector3(w*0.28,y-0.29,z+0.008),Vector3(w*0.25,0.17,0.018),0.012,Color("3e4548"))
+		"f150":
+			_rounded_box(Vector3(w*0.28,y-0.29,z+0.008),Vector3(w*0.24,0.20,0.018),0.015,Color("747d80"))
+			_rounded_box(Vector3(w*0.28,y-0.29,z+0.02),Vector3(w*0.23,0.17,0.012),0.012,Color("474f54"))
+			_screen(Vector3(0,y-0.30,z+0.035),Vector2(0.33,0.21),"OFF ROAD / 4H")
+			for x in [-0.265,0.265,-w*0.42,w*0.42]:
+				_vent(Vector3(x,y-0.30,z+0.02),Vector2(0.10,0.20))
+			_rounded_box(Vector3(0,y-0.49,z),Vector3(0.41,0.15,0.13),0.025,dark)
+			for x in [-0.14,0.14]: _knob(Vector3(x,y-0.47,z+0.08),0.03)
+			for i in 4:
+				_box(Vector3((i-1.5)*0.04,y-0.47,z+0.075),Vector3(0.027,0.018,0.008),Color("818a8f"))
+		"hilux":
+			_screen(Vector3(0,y-0.27,z+0.03),Vector2(0.25,0.145),"AUDIO / 4WD")
+			for x in [-0.085,0.085]: _vent(Vector3(x,y-0.16,z+0.015),Vector2(0.14,0.055))
+			for x in [-w*0.41,w*0.41]: _vent(Vector3(x,y-0.30,z+0.015),Vector2(0.14,0.095))
+			_rounded_box(Vector3(0,y-0.48,z+0.01),Vector3(0.32,0.21,0.08),0.026,Color("383d42"))
+			for x in [-0.10,0.0,0.10]: _knob(Vector3(x,y-0.44,z+0.065))
+			_rounded_box(Vector3(w*0.28,y-0.285,z+0.018),Vector3(w*0.22,0.13,0.012),0.015,Color("656a6b"))
+			_box(Vector3(w*0.28,y-0.35,z+0.028),Vector3(w*0.24,0.012,0.01),Color("9a9e9a"))
+		"eq246":
+			# The series reference has a raised four-gauge pod above the switch panel.
+			_rounded_box(Vector3(0.08,y-0.16,z-0.08),Vector3(0.51,0.14,0.08),0.012,dark)
+			for i in 4:
+				_aux_gauge(Vector3(-0.10+i*0.12,y-0.16,z-0.028),0.047,["OIL","TEMP","FUEL","AIR"][i])
+			for x in [-w*0.40,w*0.40]: _vent(Vector3(x,y-0.30,z+0.024),Vector2(0.11,0.12))
+			for i in 6:
+				var p:=Vector3(-0.10+i*0.07,y-0.43,z+0.03)
+				_rounded_box(p,Vector3(0.043,0.047,0.022),0.005,dark.darkened(0.1))
+				_box(p+Vector3(0,0.008,0.016),Vector3(0.018,0.004,0.006),Color("d0bc83"))
+			_label(Vector3(w*0.28,y-0.29,z+0.028),"24 V  /  6 x 6",0.018)
+		"wc62":
+			for i in 4:
+				var x: float=[-0.42,-0.31,-0.035,0.075][i]
+				_aux_gauge(Vector3(x,y-0.30,z+0.024),0.041,["AMP","OIL","FUEL","TEMP"][i])
+			for x in [-0.43,-0.28,-0.13,0.02,0.17]: _knob(Vector3(x,y-0.40,z+0.032),0.018)
+			for x in [w*0.20,w*0.34]:
+				_rounded_box(Vector3(x,y-0.34,z+0.013),Vector3(0.21,0.12,0.012),0.005,Color("3c4438"))
+				_label(Vector3(x,y-0.32,z+0.022),"GEAR / RANGE",0.012)
+				_label(Vector3(x,y-0.36,z+0.022),"1  2  3  4   R",0.010)
+			_label(Vector3(w*0.25,y-0.22,z+0.016),"MAX SPEED 40 MPH",0.016)
+		_:
+			for x in [-w*0.40,w*0.40]:
+				_vent(Vector3(x,y-0.29,z+0.022),Vector2(0.13,0.10),spec.id=="ridge")
+			if spec.id=="hauler":
+				for i in 3: _aux_gauge(Vector3(-0.03+i*0.14,y-0.29,z+0.023),0.049,["AIR","FUEL","TEMP"][i])
+			elif spec.id=="ridge":
+				for i in 4:
+					_rounded_box(Vector3((i-1.5)*0.065,y-0.30,z+0.022),Vector3(0.043,0.055,0.025),0.005,dark)
+			else:
+				_screen(Vector3(0,y-0.30,z+0.025),Vector2(0.25,0.10),"FM  /  TRAIL")
+			for x in [-0.10,0.0,0.10]: _knob(Vector3(x,y-0.43,z+0.035),0.020)
 
 func _fender(x: float, z: float, radius: float, color: Color) -> void:
 	for i in 12:
@@ -955,7 +972,6 @@ func _expedition_vehicle(spec: Dictionary) -> void:
 				_cylinder(Vector3(side*w*0.57,-0.20,z),0.08,0.112,palette.dark,12,Vector3(0,0,PI/2))
 		_beam(Vector3(-w*0.39,roof+0.16,cabin_front-0.05),Vector3(w*0.39,roof+0.16,cabin_front-0.05),0.075,palette.dark)
 		_box(Vector3(0,roof+0.10,cabin_front-0.13),Vector3(w*0.82,0.12,0.28),paint)
-		_box(Vector3(0,(roof+sill)/2,cabin_front-0.012),Vector3(0.04,roof-sill-0.14,0.04),palette.dark)
 		for side in [-1,1]:
 			_beam(Vector3(side*w*0.52,seat.y+0.12,cabin_front+0.18),Vector3(side*w*0.70,seat.y+0.15,cabin_front+0.18),0.035,palette.dark)
 			_rounded_box(Vector3(side*w*0.72,seat.y+0.18,cabin_front+0.18),Vector3(0.20,0.24,0.07),0.025,palette.glass)

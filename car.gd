@@ -270,6 +270,6 @@ func _add_tracks() -> void:
 	trail.surface_end()
 
 func _update_dashboard(kmh: float) -> void:
-	speed_needle.rotation.z = deg_to_rad(135-clampf(kmh/140,0,1)*270)
+	speed_needle.rotation.z = deg_to_rad(135-clampf(kmh/float(speed_needle.get_meta("maximum_kmh",140.0)),0,1)*270)
 	heading_needle.rotation.z = rotation.y
-	speed_readout.text = "%03d" % roundi(kmh)
+	speed_readout.text = "%03d" % roundi(kmh*float(speed_readout.get_meta("unit_scale",1.0)))

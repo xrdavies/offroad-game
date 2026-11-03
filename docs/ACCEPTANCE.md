@@ -112,6 +112,19 @@ DMG 大小：79,695,947 字节。SHA256：`c95ca74f7834efb3f43687cda3955f6be217b
 
 交付目录：`/Users/m4002/mob-files/OffRoadRider-Demos/Audio-Review-2026-11-03/`，含两份纯音色/地形合集、十份实际行驶录音和带时间点的试听说明。当前工具无法直接听辨音频，技术校验不代表完成主观音色、实车还原或发布级混音验收。未打包新安装包。
 
+## 车型物理差异与场景表现复核（2026-11-04，源项目更新）
+
+本轮把车型打磨落到驾驶反馈：十台车分别配置重心高度、转向最大角度、转向响应和稳定辅助。高车身的 Unimog、EQ246、Atlas 6×6 和 WC-62 保留更高的侧倾风险；低重心车型更容易控制。稳定辅助只提供小幅回正力，坡面、攀爬和急转仍会产生真实侧倾，车辆超过 75° 会标记为翻车状态。前轮模型也使用各自最大转角，修复了所有车辆共用固定转角的问题；轮迹空网格的收尾错误一并修复。
+
+- `tests/vehicle_dynamics.gd`：十台车的重心和转向参数、满舵响应、前轮显示角度、20° 测试坡侧倾遥测均通过。测试记录写入 `build/vehicle-dynamics.json`；坡面样本侧倾约 20–23°，未出现错误的无限值或误报翻车。
+- `tests/vehicle_scenarios.gd`：沙丘、岩石攀爬、森林、雪山和冰面共 15 个车型/地形组合通过，并保存实际游戏视口截图与 `build/vehicle-scenarios.json`。
+- `tests/vehicle_showcase.gd`：实际 Metal / Forward+ 录制前线与高山两段视频，包含沙地 F-150、岩石 Wrangler、森林 Hilux、泥地 EQ246、雪地 Unimog、冰面 Atlas 6×6、山地 Hilux 和草地 F-150；最终合并视频通过 H.264/AAC、完整解码、非静音音轨、帧率和时长差检查。
+- 回归顺序完成：资源导入、`tests/smoke.gd`、`tests/expedition.gd`、`tests/cockpit.gd`、`tests/maps.gd`、`tests/audio.gd`、`tests/vehicle_dynamics.gd` 和 `tests/vehicle_scenarios.gd` 均为 PASS；十车外观/第一人称接触表已实际查看。
+
+交付对比图和场景截图见同步目录 `OffRoadRider-Demos/Vehicle-Polish-2026-11-04/`；视频为 `OffRoadRider-Vehicle-Polish-2026-11-04.mp4`。本轮没有重新打包 DMG，用户未要求打包。
+
+本轮仍是带辅助稳定的射线悬挂模型，没有完整刚体车桥、轮胎形变、损伤、绞盘或可变形地表；录制路线是用于对比的代表性路径，不是全地图所有路线的性能证明。模型保持项目的卡通低多边形风格，已加强车型轮廓和座舱差异，但没有替换为厂商 CAD 或一比一授权内饰。
+
 ## 0.4.0 安装包（2026-11-03）
 
 本版将上述十车型模型与驾驶舱修订、三地图、20 层引擎声及 12 种地面循环纳入新 DMG，新增原创 96 秒立体声配乐 Open Tracks 与独立音乐音量。版本、音乐来源和运行边界见 [版本说明](RELEASE_0.4.0.md)。

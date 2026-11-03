@@ -41,6 +41,12 @@ var previous_velocity := Vector3.ZERO
 var pending_reset := false
 var reset_position := Vector3.ZERO
 var reset_yaw := 0.0
+var max_steer_angle := deg_to_rad(30.0)
+var current_steer_angle := 0.0
+var wheelbase := 2.5
+var roll_angle_degrees := 0.0
+var max_roll_angle_degrees := 0.0
+var tipped := false
 
 func _ready() -> void:
 	spec=VEHICLES.SPECS[vehicle_index]
@@ -49,10 +55,12 @@ func _ready() -> void:
 	rest=spec.travel
 	mass=spec.mass
 	linear_damp=0.12
-	angular_damp=2.8
+	angular_damp=2.2
 	continuous_cd=true
 	center_of_mass_mode=RigidBody3D.CENTER_OF_MASS_MODE_CUSTOM
-	center_of_mass=Vector3(0,-0.38,0.05)
+	center_of_mass=spec.get("center_of_mass",Vector3(0,-0.38,0.05))
+	max_steer_angle=deg_to_rad(float(spec.get("max_steer_deg",30.0)))
+	wheelbase=absf(float(spec.axles[spec.axles.size()-1])-float(spec.axles[0]))
 	contact_monitor=true
 	max_contacts_reported=6
 	var pm := PhysicsMaterial.new()
@@ -145,6 +153,7 @@ func _physics_process(delta: float) -> void:
 	var throttle := Input.get_axis("reverse","accelerate")
 	var steering := Input.get_axis("left","right")
 	var braking := Input.is_action_pressed("handbrake")
+	current_steer_angle=steering*max_steer_angle
 	var forward := -global_basis.z
 	var right := global_basis.x
 	var speed := linear_velocity.dot(forward)
@@ -169,7 +178,7 @@ func _physics_process(delta: float) -> void:
 				var spring := ((rest-travel)*28000.0-point_velocity.dot(normal)*3200.0)*load_scale
 				apply_force(normal*clampf(spring,0,22000*load_scale),offset)
 		wheels[i].position=wheel_points[i]-Vector3.UP*clampf(travel,0.05,rest)
-		wheels[i].rotation.y=lerp_angle(wheels[i].rotation.y,-steering*0.48 if i<2 else 0.0,delta*9)
+		wheels[i].rotation.y=lerp_angle(wheels[i].rotation.y,-current_steer_angle if i<2 else 0.0,delta*float(spec.get("steer_response",1.0))*8.0)
 		wheels[i].get_child(0).rotation.x=-wheel_spin
 	surface_kind=world.surface_at(global_position) if is_instance_valid(world) else "dirt"
 	var contact := float(grounded_wheels)/rays.size()
@@ -182,9 +191,14 @@ func _physics_process(delta: float) -> void:
 		var grip := handling.x*(0.3 if braking else 1.0)
 		apply_central_force(-right*linear_velocity.dot(right)*mass*grip*contact)
 		apply_central_force(-forward*speed*mass*(3.5 if braking else handling.y)*contact)
-		var desired_yaw: float=-steering*spec.steer*clampf(speed/7.0,-1,1)/(1.0+maxf(0,absf(speed)-13)*0.035)
+		var desired_yaw: float=-tan(current_steer_angle)*speed/maxf(wheelbase,1.0)
+		desired_yaw=clampf(desired_yaw,-1.9,1.9)*float(spec.get("steer_response",1.0))
 		apply_torque(Vector3.UP*(desired_yaw-angular_velocity.y)*mass*2.4*contact)
-		apply_torque(global_basis.y.cross(Vector3.UP)*mass*3.0)
+		# Keep a small, vehicle-specific stability assist; suspension and gravity still decide rollover.
+		apply_torque(global_basis.y.cross(Vector3.UP)*mass*float(spec.get("stability_assist",0.5))*contact)
+	roll_angle_degrees=rad_to_deg(atan2(global_basis.x.y,global_basis.y.y))
+	max_roll_angle_degrees=maxf(max_roll_angle_degrees,absf(roll_angle_degrees))
+	tipped=absf(roll_angle_degrees)>75.0
 	steering_wheel.rotation.z=lerp_angle(steering_wheel.rotation.z,-steering*1.5,delta*9)
 	_update_dashboard(absf(speed)*3.6)
 	wheel_spin+=speed*delta/radius
@@ -212,6 +226,9 @@ func reset_to_start(at: Vector3 = start_position) -> void:
 	audio_gear=0
 	audio_rpm=audio_profile.idle_rpm
 	shift_time=0
+	roll_angle_degrees=0.0
+	max_roll_angle_degrees=0.0
+	tipped=false
 	contact_surfaces.clear()
 	for player in surface_audio.values():
 		player.volume_linear=0
@@ -328,6 +345,8 @@ func _add_tracks() -> void:
 	while marks.size()>320:
 		marks.pop_front()
 	trail.clear_surfaces()
+	if marks.is_empty():
+		return
 	trail.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
 	for mark in marks:
 		for i in [0,1,2,0,2,3]:

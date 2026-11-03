@@ -8,6 +8,8 @@
 
 下一阶段先打磨现有车队和地图，再增加任务玩法：[车型打磨计划](docs/VEHICLE_POLISH_PLAN.md) · [地图场景打磨计划](docs/MAP_POLISH_PLAN.md)
 
+车型物理差异与实机对比已完成一轮复核：[车型物理与表现记录](docs/ACCEPTANCE.md#车型物理差异与场景表现复核-2026-11-04)。对比图、15 个场景截图、遥测 JSON 和 52 秒演示视频在 `/Users/m4002/mob-files/OffRoadRider-Demos/Vehicle-Polish-2026-11-04/`。
+
 ## 运行
 
 引擎：Godot 4.7.2。当前 Mac 安装于 `/Users/m4002/Applications/Godot.app`。在项目目录依次执行：

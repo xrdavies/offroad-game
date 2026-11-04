@@ -21,6 +21,25 @@
 
 也可用 Godot 打开 `project.godot`，等待导入完成后按 F6/F5 运行。默认使用 Metal / Forward+；兼容性诊断可传 `--rendering-method gl_compatibility`，该模式没有相同的环境遮蔽效果。
 
+### 全屏自动驾驶 Demo
+
+在当前 Mac 双击项目根目录的 `Start Demo.command`，会先完成资源导入，然后全屏启动自动驾驶演示。脚本自动寻找 `~/Applications/Godot.app`、`/Applications/Godot.app` 或 PATH 中的 `godot`；也可用 `GODOT_BIN` 指定引擎路径。
+
+游戏内按 **F8**，或在 Esc 菜单选择 **Start fullscreen driving demo**，也能开始演示。十台车沿预设路线自动控制油门、转向和速度，依次经过沙丘、森林、泥地、攀岩区、沼泽、海岸、港口废墟、雪山、冰湖和高山草甸，跨三张地图循环。镜头轮换追车、侧拍、第一人称和航拍；每段结束后切换到下一车型/地点。
+
+- **F11**：切换全屏/窗口；macOS 若将功能键用于系统操作，需要同时按 Fn。
+- **Esc**：暂停/继续或退出游戏；**C**：切换当前驾驶镜头。
+- **F8 / WASD / 方向键 / 空格**：结束演示并接管当前车。再次按 F8 从第一段重新开始。
+- 开始录像前先按 F8 接管；演示不自动生成录像文件。切换地图时有短暂加载，卡住或翻车会自动进入下一段。
+
+命令行入口（`--demo` 是游戏参数）：
+
+```sh
+godot --path . --fullscreen -- --demo
+```
+
+演示使用游戏实际车辆物理和音效，不会沿轨迹直接移动模型。它是固定路线的展示模式，没有通用交通 AI 或动态绕障规划。路线与目标速度在 `demo.gd`；完整循环、暂停和接管回归使用 `godot --headless --path . --fixed-fps 60 --script tests/demo.gd`，加 `-- --capture` 并使用有界面渲染器可生成各段实机截图。
+
 ## 车队与多地图更新
 
 [十车外观对照](docs/previews/fleet-all.jpg) · [十车驾驶舱](docs/previews/fleet-drivers.jpg) · [三张地图实景](docs/previews/maps-overview.jpg)
@@ -55,6 +74,8 @@
 | 打开录像目录 | F10 |
 | 隐藏 / 显示 HUD | H |
 | 设置目的地 | M 打开地图后单击 |
+| 开始 / 结束自动驾驶 Demo | F8 |
+| 全屏 / 窗口 | F11 |
 
 ## 当前内容
 

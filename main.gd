@@ -9,6 +9,10 @@ const MAP := preload("res://map.gd")
 const WIND := preload("res://assets/audio/wind.wav")
 const DISCOVERY := preload("res://assets/audio/discovery.wav")
 const MUSIC := preload("res://assets/audio/open_tracks.ogg")
+const DEMO := preload("res://demo.gd")
+var demo: Node
+var demo_button: Button
+var demo_label: Label
 var world: Node3D
 var car: RigidBody3D
 var camera: Camera3D
@@ -84,6 +88,11 @@ func _ready() -> void:
 	music.play()
 	_ui()
 	_setup_recording()
+	demo=DEMO.new()
+	demo.game=self
+	add_child(demo)
+	if OS.get_cmdline_user_args().has("--demo"):
+		start_demo.call_deferred()
 
 func _process(delta: float) -> void:
 	if changing_map or not is_instance_valid(car):
@@ -113,8 +122,22 @@ func _process(delta: float) -> void:
 	map_view.queue_redraw()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("fullscreen") and not event.is_echo():
+		_toggle_fullscreen()
+		return
 	if changing_map:
 		return
+	if event.is_action_pressed("demo") and not event.is_echo():
+		if demo.active:
+			demo.stop()
+		else:
+			start_demo()
+		return
+	if demo.active:
+		for action in ["accelerate","reverse","left","right","handbrake","reset","garage","map","low_range"]:
+			if event.is_action_pressed(action):
+				demo.stop()
+				break
 	if event.is_action_pressed("reset") and not get_tree().paused:
 		car.reset_to_start(spawn_point)
 	elif event.is_action_pressed("map"):
@@ -126,7 +149,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("garage"):
 		_toggle_garage()
 	elif event.is_action_pressed("record"):
-		if recorder.active:
+		if demo.active:
+			_toast("Press F8 to take over before recording.")
+		elif recorder.active:
 			recorder.stop_recording()
 		elif not get_tree().paused:
 			recorder.start_recording(film_view if film_mode!=0 else get_viewport())
@@ -139,6 +164,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		for child in ui.get_children():
 			if child not in [pause_panel,garage_panel,map_panel,destinations_panel,loading_label]:
 				child.visible=not hud_hidden
+		demo_label.visible=demo.active and not hud_hidden
 	elif event.is_action_pressed("pause"):
 		if destinations_panel.visible:
 			destinations_panel.hide()
@@ -159,7 +185,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			zoom=clampf(zoom+2,18,55)
 
 func _inputs() -> void:
-	var bindings := {"accelerate":[KEY_W,KEY_UP],"reverse":[KEY_S,KEY_DOWN],"left":[KEY_A,KEY_LEFT],"right":[KEY_D,KEY_RIGHT],"handbrake":[KEY_SPACE],"reset":[KEY_R],"map":[KEY_M],"pause":[KEY_ESCAPE],"camera":[KEY_C],"low_range":[KEY_L],"garage":[KEY_V],"record":[KEY_F9],"film_camera":[KEY_F6],"recordings":[KEY_F10],"hide_hud":[KEY_H]}
+	var bindings := {"accelerate":[KEY_W,KEY_UP],"reverse":[KEY_S,KEY_DOWN],"left":[KEY_A,KEY_LEFT],"right":[KEY_D,KEY_RIGHT],"handbrake":[KEY_SPACE],"reset":[KEY_R],"map":[KEY_M],"pause":[KEY_ESCAPE],"camera":[KEY_C],"low_range":[KEY_L],"garage":[KEY_V],"record":[KEY_F9],"film_camera":[KEY_F6],"recordings":[KEY_F10],"hide_hud":[KEY_H],"demo":[KEY_F8],"fullscreen":[KEY_F11]}
 	for action in bindings:
 		if not InputMap.has_action(action):
 			InputMap.add_action(action)
@@ -235,6 +261,11 @@ func _ui() -> void:
 	footer.offset_bottom=-23
 	footer.add_theme_stylebox_override("panel",_panel())
 	ui.add_child(footer)
+	demo_label=_label("",16,Color("fff0c8"))
+	demo_label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	demo_label.position=Vector2(28,-125)
+	ui.add_child(demo_label)
+	demo_label.hide()
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation",28)
 	footer.add_child(row)
@@ -272,8 +303,8 @@ func _ui() -> void:
 	map_panel.hide()
 	pause_panel=PanelContainer.new()
 	pause_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	pause_panel.position=Vector2(-180,-245)
-	pause_panel.size=Vector2(360,490)
+	pause_panel.position=Vector2(-180,-300)
+	pause_panel.size=Vector2(360,600)
 	pause_panel.add_theme_stylebox_override("panel",_panel())
 	ui.add_child(pause_panel)
 	var column := VBoxContainer.new()
@@ -288,6 +319,15 @@ func _ui() -> void:
 	destinations.text="Choose expedition map"
 	destinations.pressed.connect(_show_destinations)
 	column.add_child(destinations)
+	demo_button=Button.new()
+	demo_button.text="Start fullscreen driving demo"
+	demo_button.pressed.connect(func():
+		if demo.active:
+			demo.stop()
+			_pause(false)
+		else:
+			start_demo())
+	column.add_child(demo_button)
 	column.add_child(_label("MASTER VOLUME",12,Color("d3d1be")))
 	var volume := HSlider.new()
 	volume.min_value=0
@@ -307,7 +347,8 @@ func _ui() -> void:
 	quit_button.pressed.connect(_quit)
 	column.add_child(_label("C View · Right-drag to look · L Low range
 V Vehicle · R Recover · H Hide HUD
-F9 Start / stop video · F10 Open clips",13,Color("e8dfbd")))
+F9 Start / stop video · F10 Open clips
+F8 Auto demo · F11 Fullscreen",13,Color("e8dfbd")))
 	film_option=OptionButton.new()
 	for option in FILM_MODES:
 		film_option.add_item("Film camera: "+option)
@@ -351,6 +392,7 @@ func _build_destinations() -> void:
 func _show_destinations() -> void:
 	if changing_map:
 		return
+	demo.stop()
 	_pause(true)
 	pause_panel.hide()
 	map_panel.hide()
@@ -425,6 +467,25 @@ func _pause(value: bool) -> void:
 	if value:
 		pause_panel.get_child(0).get_child(1).grab_focus()
 
+func start_demo(fullscreen: bool = true) -> void:
+	if changing_map or demo.transitioning or demo.active or quitting:
+		return
+	if recorder.active or recorder.finishing:
+		_toast("Finish saving your recording before starting the demo.")
+		return
+	if fullscreen and DisplayServer.get_name()!="headless":
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	map_panel.hide()
+	garage_panel.hide()
+	destinations_panel.hide()
+	_pause(false)
+	demo.start()
+
+func _toggle_fullscreen() -> void:
+	if DisplayServer.get_name()!="headless":
+		var fullscreen:=DisplayServer.window_get_mode()==DisplayServer.WINDOW_MODE_FULLSCREEN
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED if fullscreen else DisplayServer.WINDOW_MODE_FULLSCREEN)
+
 func _notification(what: int) -> void:
 	if what==NOTIFICATION_WM_CLOSE_REQUEST:
 		_quit()
@@ -433,6 +494,7 @@ func _quit() -> void:
 	if quitting:
 		return
 	quitting=true
+	demo.stop()
 	get_tree().paused=true
 	if recorder.active:
 		recorder.stop_recording()

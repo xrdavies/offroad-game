@@ -47,6 +47,8 @@ var wheelbase := 2.5
 var roll_angle_degrees := 0.0
 var max_roll_angle_degrees := 0.0
 var tipped := false
+var autopilot_enabled := false
+var autopilot_input := Vector2.ZERO
 
 func _ready() -> void:
 	spec=VEHICLES.SPECS[vehicle_index]
@@ -150,9 +152,9 @@ func stop_audio() -> void:
 			child.stop()
 
 func _physics_process(delta: float) -> void:
-	var throttle := Input.get_axis("reverse","accelerate")
-	var steering := Input.get_axis("left","right")
-	var braking := Input.is_action_pressed("handbrake")
+	var throttle := autopilot_input.y if autopilot_enabled else Input.get_axis("reverse","accelerate")
+	var steering := autopilot_input.x if autopilot_enabled else Input.get_axis("left","right")
+	var braking := not autopilot_enabled and Input.is_action_pressed("handbrake")
 	current_steer_angle=steering*max_steer_angle
 	var forward := -global_basis.z
 	var right := global_basis.x

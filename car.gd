@@ -71,18 +71,7 @@ func _ready() -> void:
 	physics_material_override=pm
 	start_position=global_position
 	start_yaw=rotation.y
-	var collision := CollisionShape3D.new()
-	var box := BoxShape3D.new()
-	box.size=Vector3(spec.width*0.87,0.7,spec.length)
-	collision.shape=box
-	collision.position.y=0.25
-	add_child(collision)
-	var cabin_collision := CollisionShape3D.new()
-	var cabin_box := BoxShape3D.new()
-	cabin_box.size=Vector3(spec.width*0.87,spec.roof-0.6,1.6)
-	cabin_collision.shape=cabin_box
-	cabin_collision.position=Vector3(0,(spec.roof+0.6)/2,spec.seat.z)
-	add_child(cabin_collision)
+	_add_vehicle_collisions()
 	var body: Node3D = load("res://assets/models/"+spec.id+"_body.tscn").instantiate()
 	add_child(body)
 	steering_wheel = body.get_node("SteeringWheel")
@@ -131,6 +120,30 @@ func _ready() -> void:
 	visual.physics_interpolation_mode=Node.PHYSICS_INTERPOLATION_MODE_OFF
 	add_child(visual)
 	visual.global_transform=Transform3D.IDENTITY
+
+func _add_vehicle_collisions() -> void:
+	# Keep the visual mesh independent from the physics proxy; each proxy is stable on slopes.
+	_add_box_collision(Vector3(spec.width*0.88,0.64,spec.length*0.84),Vector3(0,0.30,0))
+	var cabin_height: float=maxf(spec.roof-0.52,0.92)
+	var cabin_depth: float=minf(2.55,maxf(1.45,wheelbase*0.72))
+	_add_box_collision(Vector3(spec.width*0.84,cabin_height,cabin_depth),Vector3(0,0.52+cabin_height*0.5,spec.seat.z))
+	var cargo_start: float=spec.seat.z+0.92
+	var cargo_length: float=spec.length*0.5-cargo_start
+	if cargo_length>0.45:
+		var cargo_height: float=0.72 if spec.id in ["pickup","f150","hilux"] else 1.15
+		var cargo_y: float=0.70 if cargo_height<1.0 else 1.25
+		_add_box_collision(Vector3(spec.width*0.82,cargo_height,cargo_length),Vector3(0,cargo_y,cargo_start+cargo_length*0.5))
+	_add_box_collision(Vector3(spec.width*0.98,0.28,0.34),Vector3(0,0.31,-spec.length*0.48))
+	_add_box_collision(Vector3(spec.width*0.98,0.28,0.28),Vector3(0,0.31,spec.length*0.48))
+
+func _add_box_collision(size: Vector3, position: Vector3) -> void:
+	var shape_node:=CollisionShape3D.new()
+	var box:=BoxShape3D.new()
+	box.size=size
+	shape_node.shape=box
+	shape_node.position=position
+	shape_node.set_meta("collision_role", "vehicle_compound")
+	add_child(shape_node)
 
 func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 	if pending_reset:
@@ -195,7 +208,8 @@ func _physics_process(delta: float) -> void:
 		apply_central_force(-forward*speed*mass*(3.5 if braking else handling.y)*contact)
 		var desired_yaw: float=-tan(current_steer_angle)*speed/maxf(wheelbase,1.0)
 		desired_yaw=clampf(desired_yaw,-1.9,1.9)*float(spec.get("steer_response",1.0))
-		apply_torque(Vector3.UP*(desired_yaw-angular_velocity.y)*mass*2.4*contact)
+		var steering_torque_gain:=clampf(5.0+mass/1000.0,5.0,12.0)
+		apply_torque(Vector3.UP*(desired_yaw-angular_velocity.y)*mass*steering_torque_gain*contact)
 		# Keep a small, vehicle-specific stability assist; suspension and gravity still decide rollover.
 		apply_torque(global_basis.y.cross(Vector3.UP)*mass*float(spec.get("stability_assist",0.5))*contact)
 	roll_angle_degrees=rad_to_deg(atan2(global_basis.x.y,global_basis.y.y))

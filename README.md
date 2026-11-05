@@ -106,6 +106,7 @@ godot --headless --path . --script tests/smoke.gd
 godot --headless --path . --script tests/expedition.gd
 godot --headless --path . --script tests/maps.gd
 godot --headless --path . --script tests/audio.gd
+godot --headless --path . --script tests/vehicle_handling_acceptance.gd
 godot --path . --script tests/capture.gd -- /tmp/off-road-rider-service.png
 ```
 
@@ -179,3 +180,11 @@ godot --path . --resolution 1600x900 --script tests/capture_maps.gd
 ```
 
 图片输出到 `build/fleet-*.png` 和 `build/map-*.png`。车辆与地图全景截图使用游戏内实际模型和光照，人工指定相机机位方便对照；驾驶舱截图使用正常第一人称视角。车辆参考来源见 [车队与地图设计说明](docs/FLEET_AND_MAPS.md)。
+
+高精度车体和驾驶舱的 Metal 实机抽样截图：
+
+```sh
+godot --path . --script tests/capture_precision.gd
+```
+
+输出到 `build/precision-review/`。复合碰撞、最小转弯半径、车轮离地和翻滚恢复统一由 `tests/vehicle_handling_acceptance.gd` 验收，结果写入 `build/vehicle-handling-acceptance.json`。

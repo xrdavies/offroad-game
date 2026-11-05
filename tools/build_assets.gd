@@ -76,6 +76,8 @@ func _initialize() -> void:
 func _begin(asset_name: String) -> void:
 	root_asset = Node3D.new()
 	root_asset.name = asset_name
+	root_asset.set_meta("model_detail", "high_precision_stylized")
+	root_asset.set_meta("interior_detail", "cad_inspired")
 	collider = null
 	surface = SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -1048,6 +1050,7 @@ func _expedition_vehicle(spec: Dictionary) -> void:
 			_box(Vector3(x,1.4,l/2+0.10),Vector3(0.035,1.55,0.035),palette.steel)
 	else:
 		_cargo_bed(spec,cabin_back+0.12)
+	_precision_detail_pass(spec,front,cabin_front,cabin_back)
 	if spec.id in ["scout","wrangler","unimog","eq246","hilux"]:
 		_rounded_box(Vector3(w*0.48,roof-0.47,cabin_front-0.10),Vector3(0.075,1.25,0.075),0.03,palette.dark)
 		_rounded_box(Vector3(w*0.48,roof+0.12,cabin_front-0.11),Vector3(0.14,0.09,0.16),0.03,palette.dark)
@@ -1061,6 +1064,35 @@ func _expedition_vehicle(spec: Dictionary) -> void:
 	if spec.id=="ridge":
 		for x in [-0.45,-0.15,0.15,0.45]:
 			_round_lamp(Vector3(x,roof+0.13,cabin_front),0.07)
+
+func _precision_detail_pass(spec: Dictionary, front: float, cabin_front: float, cabin_back: float) -> void:
+	# Small, structural seams and hardware give the generated blockout a readable CAD-like finish.
+	var w: float=spec.width
+	var seat: Vector3=spec.seat
+	var paint:=Color(spec.color)
+	var dark:=Color("252b2d")
+	var trim:=Color("8d9189")
+	for side in [-1,1]:
+		var x: float=side*w*0.505
+		# Door shut line, handle, hinge barrels and lower sill cap.
+		_beam(Vector3(x,seat.y-0.40,cabin_front+0.18),Vector3(x,seat.y-0.40,cabin_back-0.14),0.010,dark)
+		_rounded_box(Vector3(x+side*0.012,seat.y-0.26,seat.z+0.12),Vector3(0.035,0.028,0.17),0.008,trim)
+		for z in [cabin_front+0.18,cabin_back-0.18]:
+			_cylinder(Vector3(x+side*0.014,seat.y-0.18,z),0.018,0.055,dark,12,Vector3(0,0,PI/2))
+		_rounded_box(Vector3(x,0.46,seat.z+0.01),Vector3(0.07,0.07,cabin_back-cabin_front-0.15),0.018,paint.darkened(0.14))
+		# Belt anchors and a visible shoulder belt edge in the cabin.
+		_rounded_box(Vector3(side*w*0.38,seat.y-0.12,seat.z+0.48),Vector3(0.05,0.04,0.06),0.012,trim)
+		_beam(Vector3(side*w*0.38,seat.y-0.10,seat.z+0.46),Vector3(side*w*0.27,seat.y-0.52,seat.z+0.18),0.012,Color("a7a899"))
+	# Dashboard top stitch, defroster slots and a centered VIN-style plate.
+	_beam(Vector3(-w*0.43,seat.y-0.18,seat.z-0.97),Vector3(w*0.43,seat.y-0.18,seat.z-0.97),0.010,trim)
+	for x in [-w*0.30,-w*0.15,0.0,w*0.15,w*0.30]:
+		_rounded_box(Vector3(x,seat.y-0.20,seat.z-0.98),Vector3(0.075,0.018,0.025),0.006,dark)
+	_rounded_box(Vector3(0,seat.y-0.42,seat.z-0.995),Vector3(0.18,0.035,0.012),0.004,trim)
+	# Underbody skid plate and front recovery points reinforce the off-road silhouette.
+	_rounded_box(Vector3(0,0.08,front+0.18),Vector3(w*0.66,0.16,0.34),0.045,Color("444b4a"))
+	for side in [-1,1]:
+		_cylinder(Vector3(side*w*0.30,0.26,front-0.17),0.035,0.18,Color("bd6b46"),12,Vector3(PI/2,0,0))
+		_rounded_box(Vector3(side*w*0.42,0.44,front+0.32),Vector3(0.08,0.12,0.12),0.018,dark)
 
 func _glass(pos: Vector3, size: Vector3) -> void:
 	var visual := MeshInstance3D.new()

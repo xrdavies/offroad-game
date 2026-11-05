@@ -313,7 +313,8 @@ func _wheel(pos: Vector3, radius: float) -> void:
 			_cylinder(pos+Vector3(side*0.208,sin(a)*radius*0.44,cos(a)*radius*0.44),radius*0.055,0.025,palette.cream,8,Vector3(0,0,PI/2))
 		for i in 24:
 			var a: float = TAU*(i+side*0.2)/24
-			_box(pos+Vector3(side*0.09,sin(a)*radius,cos(a)*radius),Vector3(0.20,0.055,0.09),palette.rubber.lightened(0.06),Vector3(-a,side*0.25,0))
+			# Angled tread corners must clear the neighbouring tire throughout wheel rotation.
+			_box(pos+Vector3(side*0.09,sin(a)*(radius-0.04),cos(a)*(radius-0.04)),Vector3(0.20,0.055,0.09),palette.rubber.lightened(0.06),Vector3(-a,side*0.25,0))
 
 
 func _wreck(kind: int) -> void:

@@ -114,7 +114,7 @@ func _physics_process(delta: float) -> void:
 	var forward:=Vector2(-car.global_basis.z.x,-car.global_basis.z.z).normalized()
 	var angle:=atan2(forward.cross(offset),forward.dot(offset))
 	var steer: float=atan(2.0*car.wheelbase*sin(angle)/maxf(offset.length(),2.0))/car.max_steer_angle
-	steer=clampf(steer/float(car.spec.steer_response),-1,1)
+	steer=clampf(steer,-1,1)
 	var target_speed: float=route.speed*clampf(1.0-absf(steer)*0.55,0.4,1.0)
 	if point_index<points.size()-1:
 		target_speed=minf(target_speed,lerpf(3.5,float(route.speed),clampf(p.distance_to(b)/20.0,0,1)))

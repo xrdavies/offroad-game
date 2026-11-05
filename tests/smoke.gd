@@ -35,6 +35,11 @@ func _run() -> void:
 		_check(not hit.is_empty(),"Scrap heaps must have terrain collision")
 		if not hit.is_empty():
 			_check(absf(hit.position.y-height)<0.15,"Heap collision must match its visible supporting terrain")
+	# Test steering on the open flat area, not during the startup road's airborne bump.
+	var handling_start:=Vector3(-180,scene.world.height_at(-180,30)+1.8,30)
+	car.reset_to_start(handling_start)
+	car.reset_yaw=0
+	await _frames(120)
 	var start: Vector3=car.position
 	Input.action_press("accelerate")
 	await _frames(90)
@@ -50,7 +55,8 @@ func _run() -> void:
 	await _frames(90)
 	_check(car.linear_velocity.length()<speed*0.4,"Handbrake must remove forward speed")
 	Input.action_release("handbrake")
-	car.reset_to_start(scene.spawn_point)
+	car.reset_to_start(handling_start)
+	car.reset_yaw=0
 	await _frames(150)
 	_check(Vector2(car.position.x-start.x,car.position.z-start.z).length()<1,"Recovery must restore spawn without stale velocity")
 	_check(car.grounded_wheels==4,"Recovery must restore wheel contact")

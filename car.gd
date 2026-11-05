@@ -20,7 +20,16 @@ var start_yaw := 0.0
 var grounded_wheels := 0
 var surface_kind := "dirt"
 var rays: Array[RayCast3D] = []
+var tire_edge_rays: Array[Array] = []
+var contact_rays: Array[RayCast3D] = []
 var wheels: Array[Node3D] = []
+var wheel_colliders: Array[CollisionShape3D] = []
+var wheel_loads := PackedFloat64Array()
+var wheel_airtime := PackedFloat64Array()
+var wheel_max_airtime := PackedFloat64Array()
+var all_airtime := 0.0
+var max_all_airtime := 0.0
+var tilt_angle_degrees := 0.0
 var wheel_spin := 0.0
 var engine_audio: AudioStreamPlayer
 var engine_load_audio: AudioStreamPlayer
@@ -56,13 +65,15 @@ func _ready() -> void:
 	radius=spec.radius
 	rest=spec.travel
 	mass=spec.mass
+	# shortcut: sprung-body box inertia stays fixed as wheel proxies move; replace with measured tensors when CAD mass data exists.
+	inertia=mass/12.0*Vector3(spec.length*spec.length+spec.roof*spec.roof,spec.width*spec.width+spec.length*spec.length,spec.width*spec.width+spec.roof*spec.roof)
 	linear_damp=0.12
-	angular_damp=2.2
+	angular_damp=0.35
 	continuous_cd=true
 	center_of_mass_mode=RigidBody3D.CENTER_OF_MASS_MODE_CUSTOM
 	center_of_mass=spec.get("center_of_mass",Vector3(0,-0.38,0.05))
 	max_steer_angle=deg_to_rad(float(spec.get("max_steer_deg",30.0)))
-	wheelbase=absf(float(spec.axles[spec.axles.size()-1])-float(spec.axles[0]))
+	wheelbase=absf((float(spec.axles[1])+float(spec.axles[-1]))*0.5-float(spec.axles[0]))
 	contact_monitor=true
 	max_contacts_reported=6
 	var pm := PhysicsMaterial.new()
@@ -79,6 +90,9 @@ func _ready() -> void:
 	heading_needle = body.get_node("HeadingNeedle")
 	speed_readout = body.get_node("SpeedReadout")
 	_update_dashboard(0)
+	wheel_loads.resize(wheel_points.size())
+	wheel_airtime.resize(wheel_points.size())
+	wheel_max_airtime.resize(wheel_points.size())
 	for point in wheel_points:
 		var ray := RayCast3D.new()
 		ray.position=point
@@ -87,6 +101,16 @@ func _ready() -> void:
 		ray.enabled=true
 		add_child(ray)
 		rays.append(ray)
+		contact_rays.append(ray)
+		var edge_rays: Array=[]
+		for side in [-1,1]:
+			var edge:=RayCast3D.new()
+			edge.position=point+Vector3.RIGHT*side*0.37*radius/0.48*0.4
+			edge.target_position=ray.target_position
+			edge.exclude_parent=true
+			add_child(edge)
+			edge_rays.append(edge)
+		tire_edge_rays.append(edge_rays)
 		var pivot := Node3D.new()
 		pivot.position=point-Vector3.UP*rest
 		add_child(pivot)
@@ -94,6 +118,17 @@ func _ready() -> void:
 		wheel.scale=Vector3.ONE*radius/0.48
 		pivot.add_child(wheel)
 		wheels.append(pivot)
+		var tire := CollisionShape3D.new()
+		var cylinder := CylinderShape3D.new()
+		# Slightly inset tread leaves suspension rays supporting normal ground contact.
+		cylinder.radius=radius*0.94
+		cylinder.height=0.37*radius/0.48
+		tire.shape=cylinder
+		tire.position=pivot.position
+		tire.rotation.z=PI/2
+		tire.set_meta("collision_role","tire")
+		add_child(tire)
+		wheel_colliders.append(tire)
 	audio_profile=JSON.parse_string(FileAccess.get_file_as_string("res://assets/audio/profiles.json"))[spec.id]
 	audio_rpm=audio_profile.idle_rpm
 	engine_audio=_loop(load("res://assets/audio/engine_"+spec.id+"_idle.wav"),-20)
@@ -124,15 +159,22 @@ func _ready() -> void:
 func _add_vehicle_collisions() -> void:
 	# Keep the visual mesh independent from the physics proxy; each proxy is stable on slopes.
 	_add_box_collision(Vector3(spec.width*0.88,0.64,spec.length*0.84),Vector3(0,0.30,0))
-	var cabin_height: float=maxf(spec.roof-0.52,0.92)
-	var cabin_depth: float=minf(2.55,maxf(1.45,wheelbase*0.72))
-	_add_box_collision(Vector3(spec.width*0.84,cabin_height,cabin_depth),Vector3(0,0.52+cabin_height*0.5,spec.seat.z))
-	var cargo_start: float=spec.seat.z+0.92
+	var cabin_front: float=spec.seat.z-1.02
+	var cabin_back: float=spec.length/2-0.3 if spec.id in ["scout","wrangler"] else spec.seat.z+(1.12 if spec.id in ["f150","hilux"] else 0.9)
+	var cabin_height: float=spec.roof-0.42
+	_add_box_collision(Vector3(spec.width*0.96,cabin_height,cabin_back-cabin_front),Vector3(0,0.42+cabin_height*0.5,(cabin_front+cabin_back)*0.5))
+	var cargo_start: float=cabin_back+0.12
 	var cargo_length: float=spec.length*0.5-cargo_start
 	if cargo_length>0.45:
-		var cargo_height: float=0.72 if spec.id in ["pickup","f150","hilux"] else 1.15
-		var cargo_y: float=0.70 if cargo_height<1.0 else 1.25
-		_add_box_collision(Vector3(spec.width*0.82,cargo_height,cargo_length),Vector3(0,cargo_y,cargo_start+cargo_length*0.5))
+		var cargo_height: float=0.9 if spec.id in ["pickup","f150","hilux"] else 1.15
+		var cargo_y: float=0.75 if cargo_height<1.0 else 1.25
+		if spec.id=="unimog":
+			cargo_height=2.0
+			cargo_y=1.62
+		elif spec.id=="eq246":
+			cargo_height=1.6
+			cargo_y=1.70
+		_add_box_collision(Vector3(spec.width*0.92,cargo_height,cargo_length),Vector3(0,cargo_y,cargo_start+cargo_length*0.5))
 	_add_box_collision(Vector3(spec.width*0.98,0.28,0.34),Vector3(0,0.31,-spec.length*0.48))
 	_add_box_collision(Vector3(spec.width*0.98,0.28,0.28),Vector3(0,0.31,spec.length*0.48))
 
@@ -151,6 +193,9 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 		state.linear_velocity=Vector3.ZERO
 		state.angular_velocity=Vector3.ZERO
 		pending_reset=false
+		grounded_wheels=0
+		wheel_loads.fill(0.0)
+		reset_contact_metrics()
 		reset_physics_interpolation()
 
 func _exit_tree() -> void:
@@ -164,57 +209,74 @@ func stop_audio() -> void:
 		if child is AudioStreamPlayer:
 			child.stop()
 
+func wheel_steer_angle(index: int) -> float:
+	if index>=2 or absf(current_steer_angle)<0.0001:
+		return 0.0
+	var turn_radius := wheelbase/tan(absf(current_steer_angle))
+	# Inner and outer front wheels follow concentric circles about the rear axle group.
+	return -signf(current_steer_angle)*atan(wheelbase/(turn_radius-signf(current_steer_angle)*wheel_points[index].x))
+
+func reset_contact_metrics() -> void:
+	wheel_airtime.fill(0.0)
+	wheel_max_airtime.fill(0.0)
+	all_airtime=0.0
+	max_all_airtime=0.0
+
 func _physics_process(delta: float) -> void:
 	var throttle := autopilot_input.y if autopilot_enabled else Input.get_axis("reverse","accelerate")
 	var steering := autopilot_input.x if autopilot_enabled else Input.get_axis("left","right")
 	var braking := not autopilot_enabled and Input.is_action_pressed("handbrake")
-	current_steer_angle=steering*max_steer_angle
+	current_steer_angle=move_toward(current_steer_angle,steering*max_steer_angle,delta*float(spec.get("steer_response",1.0))*2.5)
 	var forward := -global_basis.z
-	var right := global_basis.x
 	var speed := linear_velocity.dot(forward)
 	grounded_wheels=0
 	contact_surfaces.clear()
-	var handling := Vector3.ZERO
 	for i in rays.size():
 		var ray := rays[i]
 		ray.force_raycast_update()
+		wheels[i].rotation.y=wheel_steer_angle(i)
+		for edge_index in 2:
+			var edge: RayCast3D=tire_edge_rays[i][edge_index]
+			edge.position=wheel_points[i]+wheels[i].basis.x*(edge_index*2-1)*0.37*radius/0.48*0.4
+			edge.force_raycast_update()
+			if edge.is_colliding() and (not ray.is_colliding() or edge.global_position.distance_to(edge.get_collision_point())<ray.global_position.distance_to(ray.get_collision_point())):
+				ray=edge
+		contact_rays[i]=ray
 		var travel := rest
+		wheel_loads[i]=0.0
 		if ray.is_colliding():
 			travel=ray.global_position.distance_to(ray.get_collision_point())-radius
 			if travel < rest:
-				grounded_wheels+=1
 				var surface: String=world.surface_at(ray.get_collision_point()+Vector3.UP*0.05) if is_instance_valid(world) else "dirt"
-				handling+=VEHICLES.SURFACES.get(surface,VEHICLES.SURFACES.dirt)
-				contact_surfaces[surface]=contact_surfaces.get(surface,0)+1
 				var normal := ray.get_collision_normal()
-				var offset := ray.global_position-global_position
-				var point_velocity := linear_velocity+angular_velocity.cross(offset)
+				var offset := ray.get_collision_point()-global_position
+				var point_velocity := linear_velocity+angular_velocity.cross(offset-global_basis*center_of_mass)
 				var load_scale := mass/850.0*4.0/rays.size()
 				var spring := ((rest-travel)*28000.0-point_velocity.dot(normal)*3200.0)*load_scale
-				apply_force(normal*clampf(spring,0,22000*load_scale),offset)
+				var load := clampf(spring,0,22000*load_scale)
+				wheel_loads[i]=load
+				if load>1.0:
+					grounded_wheels+=1
+					contact_surfaces[surface]=contact_surfaces.get(surface,0)+1
+					apply_force(normal*load,offset)
+
+		wheel_airtime[i]=wheel_airtime[i]+delta if wheel_loads[i]<=1.0 else 0.0
+		wheel_max_airtime[i]=maxf(wheel_max_airtime[i],wheel_airtime[i])
 		wheels[i].position=wheel_points[i]-Vector3.UP*clampf(travel,0.05,rest)
-		wheels[i].rotation.y=lerp_angle(wheels[i].rotation.y,-current_steer_angle if i<2 else 0.0,delta*float(spec.get("steer_response",1.0))*8.0)
 		wheels[i].get_child(0).rotation.x=-wheel_spin
+		wheel_colliders[i].transform=Transform3D(wheels[i].basis*Basis(Vector3.BACK,PI/2),wheels[i].position)
+	var total_load:=0.0
+	for load in wheel_loads: total_load+=load
+	for i in rays.size():
+		if wheel_loads[i]>1.0:
+			_apply_tire_force(i,throttle,braking,speed,total_load)
+	all_airtime=all_airtime+delta if grounded_wheels==0 else 0.0
+	max_all_airtime=maxf(max_all_airtime,all_airtime)
 	surface_kind=world.surface_at(global_position) if is_instance_valid(world) else "dirt"
-	var contact := float(grounded_wheels)/rays.size()
-	if grounded_wheels>0:
-		handling/=grounded_wheels
-		var drive: float=spec.drive*handling.z*(1.65 if low_range else 1.0)
-		var max_speed: float=(spec.speed*(0.32 if low_range else 1.0)) if throttle>=0 else 7.0
-		var available := clampf((max_speed-absf(speed))*0.7,0,1) if signf(speed)==signf(throttle) else 1.0
-		apply_central_force(forward*throttle*drive*available*contact)
-		var grip := handling.x*(0.3 if braking else 1.0)
-		apply_central_force(-right*linear_velocity.dot(right)*mass*grip*contact)
-		apply_central_force(-forward*speed*mass*(3.5 if braking else handling.y)*contact)
-		var desired_yaw: float=-tan(current_steer_angle)*speed/maxf(wheelbase,1.0)
-		desired_yaw=clampf(desired_yaw,-1.9,1.9)*float(spec.get("steer_response",1.0))
-		var steering_torque_gain:=clampf(5.0+mass/1000.0,5.0,12.0)
-		apply_torque(Vector3.UP*(desired_yaw-angular_velocity.y)*mass*steering_torque_gain*contact)
-		# Keep a small, vehicle-specific stability assist; suspension and gravity still decide rollover.
-		apply_torque(global_basis.y.cross(Vector3.UP)*mass*float(spec.get("stability_assist",0.5))*contact)
 	roll_angle_degrees=rad_to_deg(atan2(global_basis.x.y,global_basis.y.y))
 	max_roll_angle_degrees=maxf(max_roll_angle_degrees,absf(roll_angle_degrees))
-	tipped=absf(roll_angle_degrees)>75.0
+	tilt_angle_degrees=rad_to_deg(acos(clampf(global_basis.y.dot(Vector3.UP),-1,1)))
+	tipped=tilt_angle_degrees>75.0
 	steering_wheel.rotation.z=lerp_angle(steering_wheel.rotation.z,-steering*1.5,delta*9)
 	_update_dashboard(absf(speed)*3.6)
 	wheel_spin+=speed*delta/radius
@@ -232,6 +294,27 @@ func _physics_process(delta: float) -> void:
 	previous_velocity=linear_velocity
 	if grounded_wheels>1 and surface_kind!="road" and global_position.distance_to(last_mark)>0.65:
 		_add_tracks()
+
+func _apply_tire_force(i: int, throttle: float, braking: bool, speed: float, total_load: float) -> void:
+	var ray:=contact_rays[i]
+	var normal:=ray.get_collision_normal()
+	var offset:=ray.get_collision_point()-global_position
+	var point_velocity:=linear_velocity+angular_velocity.cross(offset-global_basis*center_of_mass)
+	var surface: String=world.surface_at(ray.get_collision_point()+Vector3.UP*0.05) if is_instance_valid(world) else "dirt"
+	var handling: Vector3=VEHICLES.SURFACES.get(surface,VEHICLES.SURFACES.dirt)
+	var tire_forward := (-wheels[i].global_basis.z).slide(normal).normalized()
+	var tire_right := tire_forward.cross(normal).normalized()
+	var along_speed := point_velocity.dot(tire_forward)
+	var side_speed := point_velocity.dot(tire_right)
+	var max_speed: float=(spec.speed*(0.32 if low_range else 1.0)) if throttle>=0 else 7.0
+	var available := clampf((max_speed-absf(speed))*0.7,0,1) if signf(speed)==signf(throttle) else 1.0
+	# Load sharing approximates locked all-wheel drive without creating extra total engine force.
+	var drive: float=throttle*spec.drive*handling.z*available*(1.65 if low_range else 1.0)*wheel_loads[i]/total_load
+	var resistance := -along_speed*mass/rays.size()*(3.5 if braking else handling.y)
+	var lateral := -side_speed*mass/rays.size()*handling.x*6.0*(0.3 if braking else 1.0)
+	# shortcut: load-limited tire friction; add tire deformation when soft-soil physics is implemented.
+	var tire_force := (tire_forward*(drive+resistance)+tire_right*lateral).limit_length(wheel_loads[i]*handling.x*0.28)
+	apply_force(tire_force,offset)
 
 func reset_to_start(at: Vector3 = start_position) -> void:
 	reset_position=at

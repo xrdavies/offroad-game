@@ -21,7 +21,10 @@ func blocked(faces: PackedVector3Array, a: Vector3, b: Vector3) -> bool:
 func _initialize() -> void:
 	for spec in VEHICLES.SPECS:
 		var body: Node3D=load("res://assets/models/"+spec.id+"_body.tscn").instantiate()
-		var faces: PackedVector3Array=body.get_node("Model").mesh.get_faces()
+		var faces:=PackedVector3Array()
+		for mesh_name in ["Model","Cabin","Seats"]:
+			if body.has_node(mesh_name):
+				faces.append_array(body.get_node(mesh_name).mesh.get_faces())
 		for name in ["SpeedNeedle","HeadingNeedle","SpeedReadout"]:
 			if body.find_children(name+"*","",false,false).size()!=1:
 				failures.append(spec.id+": duplicate live instrument "+name)

@@ -76,8 +76,8 @@ func _initialize() -> void:
 func _begin(asset_name: String) -> void:
 	root_asset = Node3D.new()
 	root_asset.name = asset_name
-	root_asset.set_meta("model_detail", "high_precision_stylized")
-	root_asset.set_meta("interior_detail", "cad_inspired")
+	root_asset.set_meta("model_detail", "procedural_stylized")
+	root_asset.set_meta("interior_detail", "reference_inspired")
 	collider = null
 	surface = SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -89,7 +89,7 @@ func _save(file_name: String) -> void:
 	assert(ResourceSaver.save(scene, OUT + file_name + ".tscn") == OK)
 	root_asset.free()
 
-func _mesh_node(node_name: String, pos: Vector3) -> MeshInstance3D:
+func _mesh_node(node_name: String, pos: Vector3, roughness := 0.9) -> MeshInstance3D:
 	var visual := MeshInstance3D.new()
 	visual.name = node_name
 	visual.position = pos
@@ -98,7 +98,7 @@ func _mesh_node(node_name: String, pos: Vector3) -> MeshInstance3D:
 	var material := StandardMaterial3D.new()
 	material.vertex_color_use_as_albedo = true
 	material.vertex_color_is_srgb = false
-	material.roughness = 0.9
+	material.roughness = roughness
 	visual.material_override = material
 	root_asset.add_child(visual)
 	visual.owner = root_asset
@@ -214,8 +214,11 @@ func _steering(spec: Dictionary) -> void:
 			_beam(end*0.40+Vector3(0,0,0.024),end*0.90+Vector3(0,0,0.024),0.012,Color("8b8c88"))
 	if vintage:
 		_cylinder(Vector3(0,0,0.015),0.042,0.028,Color("636a46"),32,Vector3(PI/2,0,0))
+	elif spec.id=="eq246":
+		_cylinder(Vector3(0,0,0.025),0.058,0.045,Color("41483b"),40,Vector3(PI/2,0,0))
 	else:
-		_rounded_box(Vector3(0,-0.007,0.026),Vector3(0.17 if truck else 0.14,0.09,0.052),0.032,rim)
+		var hub_size:=Vector3(0.18,0.12,0.06) if spec.id=="f150" else Vector3(0.145,0.13,0.06) if spec.id=="wrangler" else Vector3(0.17,0.09,0.052) if truck else Vector3(0.14,0.105,0.052)
+		_rounded_box(Vector3(0,-0.007,0.026),hub_size,0.045 if spec.id=="wrangler" else 0.022,rim)
 		if spec.id in ["wrangler","unimog","f150","hilux"]:
 			for side in [-1,1]:
 				for row in 2:
@@ -224,7 +227,7 @@ func _steering(spec: Dictionary) -> void:
 		_rounded_box(Vector3(0,radius,0.018),Vector3(0.028,0.042,0.024),0.006,Color("be6c37"))
 		for side in [-1,1]:
 			_rounded_box(Vector3(side*0.135,0.04,-0.045),Vector3(0.028,0.12,0.025),0.008,Color("9da1a2"))
-	var wheel:=_mesh_node("SteeringWheel",spec.seat+Vector3(0,-0.39,-0.64))
+	var wheel:=_mesh_node("SteeringWheel",spec.seat+Vector3(0,-0.39,-0.64),0.62)
 	wheel.rotation.x=-0.20 if not vintage else -0.32
 	surface=body_surface
 
@@ -534,6 +537,9 @@ func _relay() -> void:
 	_box(Vector3(0,8.2,0),Vector3(0.09,1.5,0.09),palette.dark)
 
 func _cockpit(spec: Dictionary, cabin_front: float) -> void:
+	var exterior_surface := surface
+	surface=SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var seat: Vector3 = spec.seat
 	var w: float = spec.width
 	var trim := Color("62684b") if spec.id in ["wc62","eq246"] else Color("45494b")
@@ -566,22 +572,37 @@ func _cockpit(spec: Dictionary, cabin_front: float) -> void:
 		for row in 4:
 			_box(Vector3(x,seat.y-0.81+row*0.02,seat.z-0.671-row*0.006),Vector3(0.051,0.004,0.004),Color("a1ac92"))
 	_dashboard(spec)
-	# Upholstery, piping and ribbed inserts are sized consistently across all cars.
+	var cabin_surface := surface
+	surface=SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	# Seat structure follows the sport, utility, military and vintage cabin families.
 	for x in [-w*0.23,w*0.23]:
 		_rounded_box(Vector3(x,seat.y-0.76,seat.z+0.16),Vector3(w*0.30,0.18,0.65),0.065,charcoal)
 		_rounded_box(Vector3(x,seat.y-0.66,seat.z+0.15),Vector3(w*0.26,0.08,0.51),0.035,leather)
 		if spec.id=="wc62":
 			_rounded_box(Vector3(x,seat.y-0.49,seat.z+0.43),Vector3(w*0.30,0.35,0.13),0.035,leather)
 			continue
-		_rounded_box(Vector3(x,seat.y-0.39,seat.z+0.5),Vector3(w*0.30,0.66,0.18),0.065,charcoal,Vector3(-0.1,0,0))
-		_rounded_box(Vector3(x,seat.y-0.39,seat.z+0.39),Vector3(w*0.25,0.52,0.065),0.03,leather,Vector3(-0.1,0,0))
-		for row in 6:
-			_box(Vector3(x,seat.y-0.57+row*0.07,seat.z+0.354+(0.18-row*0.07)*0.1),Vector3(w*0.22,0.004,0.004),Color("b8ad83"),Vector3(-0.1,0,0))
-			_box(Vector3(x,seat.y-0.618,seat.z+0.15+(row-2.5)*0.07),Vector3(w*0.22,0.003,0.003),Color("b8ad83"))
+		var truck_seat: bool=spec.id in ["unimog","eq246","hauler"]
+		var sport_seat: bool=spec.id in ["f150","ridge"]
+		var back_width: float=w*(0.25 if sport_seat else 0.28)
+		var back_height: float=0.59 if spec.id=="eq246" else 0.66
+		var recline: float=-0.06 if truck_seat else -0.17 if sport_seat else -0.11
+		_rounded_box(Vector3(x,seat.y-0.39,seat.z+0.5),Vector3(back_width,back_height,0.18),0.045 if truck_seat else 0.075,charcoal,Vector3(recline,0,0))
+		_rounded_box(Vector3(x,seat.y-0.39,seat.z+0.39),Vector3(back_width*0.77,back_height*0.79,0.065),0.025,leather,Vector3(recline,0,0))
+		for row in (3 if truck_seat else 7):
+			var offset: float=row*(0.12 if truck_seat else 0.06)
+			_box(Vector3(x,seat.y-0.57+offset,seat.z+0.354+(0.18-offset)*-recline),Vector3(back_width*0.68,0.004,0.004),leather.lightened(0.12),Vector3(recline,0,0))
+			_box(Vector3(x,seat.y-0.618,seat.z-0.04+offset),Vector3(back_width*0.68,0.003,0.003),leather.lightened(0.12))
 		for side in [-1,1]:
-			_rounded_box(Vector3(x+side*w*0.125,seat.y-0.4,seat.z+0.36),Vector3(0.09,0.54,0.11),0.04,charcoal,Vector3(-0.1,0,0))
+			_rounded_box(Vector3(x+side*back_width*0.45,seat.y-0.4,seat.z+0.36),Vector3(0.115 if sport_seat else 0.065,0.53,0.17 if sport_seat else 0.08),0.03,charcoal,Vector3(recline,0,0))
+			_box(Vector3(x+side*0.18,seat.y-0.855,seat.z+0.15),Vector3(0.035,0.045,0.57),Color("747a7b"))
 			_cylinder(Vector3(x+side*0.085,seat.y-0.015,seat.z+0.49),0.009,0.15,Color("a1ae97"),16)
-		_rounded_box(Vector3(x,seat.y+0.07,seat.z+0.49),Vector3(0.30,0.18,0.12),0.048,leather)
+		_rounded_box(Vector3(x,seat.y+0.07,seat.z+0.49),Vector3(0.33 if sport_seat else 0.27,0.22 if sport_seat else 0.15,0.12),0.04,leather)
+		if spec.id=="unimog":
+			for fold in 4:
+				_rounded_box(Vector3(x,seat.y-0.86+fold*0.018,seat.z+0.19),Vector3(back_width*0.72,0.016,0.44),0.006,charcoal.lightened(fold*0.025))
+	_mesh_node("Seats",Vector3.ZERO,0.96 if spec.id in ["eq246","wc62","unimog","hilux"] else 0.74)
+	surface=cabin_surface
 	var vintage: bool=spec.id=="wc62"
 	var automatic: bool=spec.id in ["f150","unimog"]
 	var console_width: float=0.30 if spec.id=="f150" else 0.25 if spec.id=="unimog" else 0.18
@@ -610,17 +631,35 @@ func _cockpit(spec: Dictionary, cabin_front: float) -> void:
 			# Exposed metal and canvas door strap; no modern padded door card.
 			_rounded_box(Vector3(x,seat.y-0.63,seat.z+0.05),Vector3(0.035,0.22,1.12),0.012,Color("636a46"))
 			_beam(Vector3(x,seat.y-0.26,seat.z-0.56),Vector3(x,seat.y-0.36,seat.z+0.45),0.028,Color("9b8e65"))
+		elif spec.id=="eq246":
+			_rounded_box(Vector3(x,seat.y-0.49,seat.z+0.05),Vector3(0.045,0.43,1.20),0.015,trim)
+			for row in 3:
+				_box(Vector3(x-side*0.026,seat.y-0.61+row*0.07,seat.z+0.12),Vector3(0.012,0.012,0.62),trim.lightened(0.13))
+			_beam(Vector3(x-side*0.05,seat.y-0.40,seat.z-0.14),Vector3(x-side*0.05,seat.y-0.40,seat.z+0.12),0.024,charcoal)
+			_beam(Vector3(x-side*0.045,seat.y-0.47,seat.z-0.35),Vector3(x-side*0.08,seat.y-0.54,seat.z-0.44),0.012,Color("929895"))
 		else:
+			var modern: bool=spec.id=="f150"
+			var utility: bool=spec.id=="unimog"
 			_rounded_box(Vector3(x,seat.y-0.49,seat.z+0.05),Vector3(0.06,0.43,1.20),0.025,charcoal)
-			_rounded_box(Vector3(x-side*0.033,seat.y-0.47,seat.z),Vector3(0.035,0.20,0.75),0.02,leather)
-			_rounded_box(Vector3(x-side*0.067,seat.y-0.44,seat.z-0.03),Vector3(0.10,0.05,0.36),0.02,charcoal)
+			_rounded_box(Vector3(x-side*0.033,seat.y-0.47,seat.z),Vector3(0.035,0.24 if modern else 0.16,0.82 if modern else 0.65),0.018,leather)
+			_rounded_box(Vector3(x-side*0.067,seat.y-0.44,seat.z-0.03),Vector3(0.13 if modern else 0.08,0.065,0.55 if modern else 0.34),0.02,charcoal)
 			_rounded_box(Vector3(x-side*0.043,seat.y-0.30,seat.z-0.35),Vector3(0.022,0.027,0.12),0.008,Color("949895"))
+			if utility:
+				_beam(Vector3(x-side*0.07,seat.y-0.53,seat.z-0.26),Vector3(x-side*0.07,seat.y-0.28,seat.z-0.37),0.025,charcoal)
+			if spec.id in ["f150","hilux"]:
+				for button in 4:
+					_box(Vector3(x-side*0.09,seat.y-0.403,seat.z-0.20+button*0.045),Vector3(0.027,0.008,0.026),Color("858b8c"))
+			if spec.id=="wrangler":
+				for strand in 7:
+					_beam(Vector3(x-side*0.04,seat.y-0.68,seat.z-0.20+strand*0.08),Vector3(x-side*0.04,seat.y-0.53,seat.z-0.12+strand*0.08),0.007,leather.lightened(0.15))
 	# Thin wiper blades and rubber windshield seals give the aperture scale.
 	for x in [-w*0.26,w*0.26]:
 		_beam(Vector3(x,seat.y-0.2,cabin_front+0.045),Vector3(x-0.14,seat.y-0.11,cabin_front+0.045),0.013,charcoal)
 		_rounded_box(Vector3(x-0.13,seat.y-0.11,cabin_front+0.052),Vector3(0.34,0.014,0.016),0.006,Color("1e3028"),Vector3(0,0,0.10))
 	_beam(seat+Vector3(0,-0.62,-0.86),seat+Vector3(0,-0.39,-0.66),0.065,charcoal)
 	_steering(spec)
+	_mesh_node("Cabin",Vector3.ZERO,0.78)
+	surface=exterior_surface
 
 func _vent(pos: Vector3, size: Vector2, round_vent := false) -> void:
 	var frame:=Color("929690")
@@ -1066,7 +1105,7 @@ func _expedition_vehicle(spec: Dictionary) -> void:
 			_round_lamp(Vector3(x,roof+0.13,cabin_front),0.07)
 
 func _precision_detail_pass(spec: Dictionary, front: float, cabin_front: float, cabin_back: float) -> void:
-	# Small, structural seams and hardware give the generated blockout a readable CAD-like finish.
+	# Door hardware is already placed on each door panel in _expedition_vehicle.
 	var w: float=spec.width
 	var seat: Vector3=spec.seat
 	var paint:=Color(spec.color)
@@ -1074,11 +1113,8 @@ func _precision_detail_pass(spec: Dictionary, front: float, cabin_front: float, 
 	var trim:=Color("8d9189")
 	for side in [-1,1]:
 		var x: float=side*w*0.505
-		# Door shut line, handle, hinge barrels and lower sill cap.
+		# Door shut line and lower sill cap stay below the window opening.
 		_beam(Vector3(x,seat.y-0.40,cabin_front+0.18),Vector3(x,seat.y-0.40,cabin_back-0.14),0.010,dark)
-		_rounded_box(Vector3(x+side*0.012,seat.y-0.26,seat.z+0.12),Vector3(0.035,0.028,0.17),0.008,trim)
-		for z in [cabin_front+0.18,cabin_back-0.18]:
-			_cylinder(Vector3(x+side*0.014,seat.y-0.18,z),0.018,0.055,dark,12,Vector3(0,0,PI/2))
 		_rounded_box(Vector3(x,0.46,seat.z+0.01),Vector3(0.07,0.07,cabin_back-cabin_front-0.15),0.018,paint.darkened(0.14))
 		# Belt anchors and a visible shoulder belt edge in the cabin.
 		_rounded_box(Vector3(side*w*0.38,seat.y-0.12,seat.z+0.48),Vector3(0.05,0.04,0.06),0.012,trim)
